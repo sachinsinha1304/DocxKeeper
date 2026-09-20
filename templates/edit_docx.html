@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Editing - {{ filename }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        /* Top bar */
+        .topbar {
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .topbar h1 {
+            font-size: 18px;
+            margin: 0;
+            color: #333;
+        }
+        .topbar .actions button {
+            margin-left: 8px;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 8px 24px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 53px;
+            z-index: 99;
+        }
+        .toolbar button, .toolbar select {
+            border: 1px solid transparent;
+            background: transparent;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .toolbar button:hover, .toolbar select:hover {
+            background: #f1f3f4;
+            border-color: #dadce0;
+        }
+
+        /* Page canvas */
+        .page-wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px 100px;
+        }
+        .page {
+            background: #fff;
+            width: 816px;      /* ~8.5in at 96dpi */
+            min-height: 1056px; /* ~11in at 96dpi */
+            padding: 96px 80px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.08);
+            outline: none;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #202124;
+        }
+        .page h1 { font-size: 28px; margin: 24px 0 12px; }
+        .page h2 { font-size: 22px; margin: 20px 0 10px; }
+        .page h3 { font-size: 18px; margin: 16px 0 8px; }
+        .page p { margin: 8px 0; }
+        .page table { margin: 12px 0; }
+        .page table td { padding: 6px 10px; border: 1px solid #ccc; }
+        .page img { display: block; margin: 12px 0; }
+
+        .btn {
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #1a73e8; color: #fff; }
+        .btn-secondary { background: #f1f3f4; color: #333; }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <h1>📄 {{ filename }}</h1>
+        <div class="actions">
+            <button class="btn btn-secondary" onclick="window.location.href = document.referrer || '/'">Cancel</button>
+            <button class="btn btn-primary" onclick="saveDoc()">Save</button>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <select onchange="formatBlock(this.value)">
+            <option value="p">Normal text</option>
+            <option value="h1">Heading 1</option>
+            <option value="h2">Heading 2</option>
+            <option value="h3">Heading 3</option>
+        </select>
+        <button onclick="exec('bold')"><b>B</b></button>
+        <button onclick="exec('italic')"><i>I</i></button>
+        <button onclick="exec('underline')"><u>U</u></button>
+        <button onclick="exec('insertUnorderedList')">• List</button>
+        <button onclick="exec('insertOrderedList')">1. List</button>
+        <button onclick="document.getElementById('imgInput').click()">🖼 Image</button>
+        <button onclick="insertTable()">▦ Table</button>
+        <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="insertImage(event)">
+    </div>
+
+    <div class="page-wrapper">
+        <div class="page" id="editor" contenteditable="true">{{ doc_html | safe }}</div>
+    </div>
+
+    <form id="saveForm" method="POST" action="{{ url_for('edit_docx_save') }}" style="display:none;">
+        <input type="hidden" name="parent" value="{{ parent }}">
+        <input type="hidden" name="name" value="{{ filename }}">
+        <input type="hidden" name="return_url" value="{{ request.referrer }}">
+        <textarea name="doc_html" id="doc_html_field"></textarea>
+    </form>
+
+    <script>
+        function exec(command) {
+            document.execCommand(command, false, null);
+            document.getElementById('editor').focus();
+        }
+
+        function formatBlock(tag) {
+            document.execCommand('formatBlock', false, tag);
+            document.getElementById('editor').focus();
+        }
+
+        function insertImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.execCommand('insertImage', false, e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function insertTable() {
+            const rows = prompt("Number of rows?", "2");
+            const cols = prompt("Number of columns?", "2");
+            if (!rows || !cols) return;
+            let html = '<table border="1" style="border-collapse:collapse;width:100%;">';
+            for (let r = 0; r < parseInt(rows); r++) {
+                html += '<tr>';
+                for (let c = 0; c < parseInt(cols); c++) {
+                    html += '<td>&nbsp;</td>';
+                }
+                html += '</tr>';
+            }
+            html += '</table><p><br></p>';
+            document.execCommand('insertHTML', false, html);
+        }
+
+        function saveDoc() {
+            const editor = document.getElementById('editor');
+            document.getElementById('doc_html_field').value = editor.innerHTML;
+            document.getElementById('saveForm').submit();
+        }
+    </script>
+
+</body>
+</html>

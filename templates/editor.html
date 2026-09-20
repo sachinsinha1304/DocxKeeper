@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multi-Channel Editor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        textarea { width: 100%; max-width: 800px; padding: 10px; font-size: 16px; }
+        .controls { margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <h2>Multi-Channel Collaborative Editor</h2>
+
+    <div class="controls">
+        <label for="channelSelect"><strong>Select Channel: </strong></label>
+        <select id="channelSelect">
+            <option value="1">Channel 1</option>
+            <option value="2">Channel 2</option>
+            <option value="3">Channel 3</option>
+        </select>
+    </div>
+
+    <!-- Textarea for editing -->
+    <textarea id="editor" rows="18" placeholder="Start typing..."></textarea>
+
+    <!-- Socket.IO client script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const editor = document.getElementById('editor');
+        const channelSelect = document.getElementById('channelSelect');
+
+        let currentChannel = channelSelect.value;
+        let previousChannel = null;
+        let isRemoteUpdate = false;
+
+        // Join initial channel on connection
+        socket.on('connect', () => {
+            socket.emit('join_channel', { channel: currentChannel, old_channel: null });
+            previousChannel = currentChannel;
+        });
+
+        // Handle dropdown channel switching
+        channelSelect.addEventListener('change', () => {
+            const newChannel = channelSelect.value;
+            
+            // Tell server to switch rooms
+            socket.emit('join_channel', { 
+                channel: newChannel, 
+                old_channel: currentChannel 
+            });
+            
+            previousChannel = currentChannel;
+            currentChannel = newChannel;
+        });
+
+        // Load document text sent from server when joining a room
+        socket.on('load_document', (data) => {
+            isRemoteUpdate = true;
+            editor.value = data.text;
+            isRemoteUpdate = false;
+        });
+
+        // Send text updates as user types
+        editor.addEventListener('input', () => {
+            if (isRemoteUpdate) return; // Prevent echo loops
+            
+            const content = editor.value;
+            socket.emit('text_update', { 
+                text: content, 
+                channel: currentChannel 
+            });
+        });
+
+        // Receive real-time updates from other users in the same channel
+        socket.on('receive_update', (data) => {
+            isRemoteUpdate = true;
+            editor.value = data.text;
+            isRemoteUpdate = false;
+        });
+    </script>
+</body>
+</html>
