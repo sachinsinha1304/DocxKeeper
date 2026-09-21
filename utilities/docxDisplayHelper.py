@@ -12,10 +12,12 @@ import json
 
 
 path = r"./documents/"
+HIDDEN_SUFFIXES = (".lock", ".editing.json", ".tmp")
 
 def listAllTeamFolder():
     target_path = Path(path)
     folder_list = [folder_name for folder_name in os.listdir(target_path)]
+    folder_list = [e for e in folder_list if not e.endswith(HIDDEN_SUFFIXES)]
     if folder_list is None or folder_list == []:
         return [], True
     return folder_list, False

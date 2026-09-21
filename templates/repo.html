@@ -2,38 +2,85 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Docx Explorer</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <title>{{ current_path }}</title>
 </head>
-<body class="container mt-5">
+<body>
+    <div class="container mt-4">
 
-    <h2>Document Explorer</h2>
-    
-    {% if current_path %}
-        <a href="javascript:history.back()" class="btn btn-secondary mb-3">⬅ Back</a>
-    {% endif %}
-
-    <hr>
-
-    {% if isEmpty %}
-        <p class="text-muted">This folder is empty.</p>
-    {% else %}
-        <div class="list-group">
-            {% for item in folder_list %}
-                {% if item.is_file %}
-                    <!-- File item: links to download/view the file -->
-                    <a href="/all-docx/{{ item.route_path }}" class="list-group-item list-group-item-action">
-                        📄 <strong>{{ item.name }}</strong> <span class="text-muted float-end">File</span>
-                    </a>
-                {% else %}
-                    <!-- Folder item: links deeper into the directory tree -->
-                    <a href="/all-docx/{{ item.route_path }}" class="list-group-item list-group-item-action list-group-item-primary">
-                        📁 <strong>{{ item.name }}</strong> <span class="float-end">Folder ➡</span>
-                    </a>
-                {% endif %}
-            {% endfor %}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">{{ current_path }}</h4>
+            <div>
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createFolderModal">
+                    📁 New Folder
+                </button>
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createDocxModal">
+                    ➕ New Document
+                </button>
+            </div>
         </div>
-    {% endif %}
 
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        {% if isEmpty %}
+            <p class="text-muted">This folder is empty.</p>
+        {% else %}
+            {% for item in folder_list %}
+                <a type="button" class="btn btn-primary" href="/all-docx/{{ item.route_path }}">
+                    {% if item.is_file %}📄{% else %}📁{% endif %} {{ item.name }}
+                </a>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- New Folder Modal -->
+    <div class="modal fade" id="createFolderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('create_folder_route', subpath=current_path) }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Create New Folder</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label class="form-label">Folder name</label>
+                        <input type="text" class="form-control" name="new_folder_name" required autofocus>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Docx Modal -->
+    <div class="modal fade" id="createDocxModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('create_docx_route', subpath=current_path) }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Create New Document</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label class="form-label">File name</label>
+                        <input type="text" class="form-control" name="new_filename" placeholder="e.g. meeting-notes" required autofocus>
+                        <small class="text-muted">".docx" will be added automatically if you leave it off.</small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
 </body>
 </html>

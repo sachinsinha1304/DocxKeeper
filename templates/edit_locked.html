@@ -1,0 +1,7 @@
+<!DOCTYPE html>
+<html><head><title>Document Locked</title></head>
+<body style="font-family:sans-serif; text-align:center; margin-top:80px;">
+    <h2>🔒 This document is currently being edited</h2>
+    <p>Someone else is editing <strong>{{ filename }}</strong> right now.</p>
+    <a href="{{ url_for('show_docx_in_repo', subpath=subpath) }}">View Document (Read-only)</a>
+</body></html>

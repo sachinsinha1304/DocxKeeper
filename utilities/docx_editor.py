@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup, NavigableString
 from docx import Document
 from docx.shared import Inches
 from docx.oxml.ns import qn
+from .file_safety import exclusive_write_lock, atomic_write_docx, get_version_stamp
 
 
 # ---------- DOCX -> HTML (for loading into the editor) ----------
@@ -74,7 +75,9 @@ def get_docx_as_html(file_path, file_name):
             from docx.table import Table
             html_parts.append(table_to_html(Table(child, doc)))
 
-    return "\n".join(html_parts)
+    html_result = "\n".join(html_parts)
+    version = get_version_stamp(target_path)
+    return html_result, version
 
 
 # ---------- HTML -> DOCX (for saving edits) ----------
@@ -112,13 +115,10 @@ def _add_runs_from_node(paragraph, node, bold=False, italic=False, underline=Fal
         _add_runs_from_node(paragraph, child, bold, italic, underline)
 
 
-def save_html_as_docx(file_path, file_name, html_content):
-    """Rebuilds the docx from scratch based on the edited HTML."""
-    target_path = Path(file_path) / file_name
-    doc = Document()  # fresh document — replaces old content entirely
-
+def _build_document_from_html(html_content):
+    """Pure function: HTML -> in-memory Document. No disk access."""
+    doc = Document()
     soup = BeautifulSoup(html_content, "html.parser")
-
     heading_map = {"h1": 1, "h2": 2, "h3": 3, "h4": 4, "h5": 5, "h6": 6}
 
     for element in soup.find_all(["p", "h1", "h2", "h3", "h4", "h5", "h6", "table"], recursive=False):
@@ -141,5 +141,25 @@ def save_html_as_docx(file_path, file_name, html_content):
             for child in element.children:
                 _add_runs_from_node(paragraph, child)
 
-    doc.save(target_path)
-    return str(target_path)
+    return doc
+
+
+def save_html_as_docx(file_path, file_name, html_content, expected_version):
+    """
+    Rebuilds the docx from the edited HTML and writes it safely:
+      - exclusive lock serializes concurrent writers
+      - version check prevents silently overwriting someone else's newer save
+      - atomic write means readers never see a half-written file
+    Returns {"success": bool, "reason": str|None}.
+    """
+    target_path = Path(file_path) / file_name
+
+    with exclusive_write_lock(target_path):
+        current_version = get_version_stamp(target_path)
+        if current_version != expected_version:
+            return {"success": False, "reason": "conflict"}
+
+        doc = _build_document_from_html(html_content)
+        atomic_write_docx(target_path, lambda tmp_path: doc.save(tmp_path))
+
+    return {"success": True, "reason": None}

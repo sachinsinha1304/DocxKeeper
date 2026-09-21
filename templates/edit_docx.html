@@ -65,8 +65,8 @@
         }
         .page {
             background: #fff;
-            width: 816px;      /* ~8.5in at 96dpi */
-            min-height: 1056px; /* ~11in at 96dpi */
+            width: 816px;
+            min-height: 1056px;
             padding: 96px 80px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.08);
             outline: none;
@@ -91,14 +91,22 @@
         }
         .btn-primary { background: #1a73e8; color: #fff; }
         .btn-secondary { background: #f1f3f4; color: #333; }
+
+        .save-status {
+            font-size: 13px;
+            color: #666;
+            margin-right: 12px;
+            align-self: center;
+        }
     </style>
 </head>
 <body>
 
     <div class="topbar">
         <h1>📄 {{ filename }}</h1>
-        <div class="actions">
-            <button class="btn btn-secondary" onclick="window.location.href = document.referrer || '/'">Cancel</button>
+        <div class="actions" style="display:flex; align-items:center;">
+            <span class="save-status" id="saveStatus"></span>
+            <a href="{{ url_for('show_docx_in_repo', subpath=subpath) }}" class="btn btn-secondary">Cancel</a>
             <button class="btn btn-primary" onclick="saveDoc()">Save</button>
         </div>
     </div>
@@ -124,14 +132,15 @@
         <div class="page" id="editor" contenteditable="true">{{ doc_html | safe }}</div>
     </div>
 
-    <form id="saveForm" method="POST" action="{{ url_for('edit_docx_save') }}" style="display:none;">
-        <input type="hidden" name="parent" value="{{ parent }}">
-        <input type="hidden" name="name" value="{{ filename }}">
-        <input type="hidden" name="return_url" value="{{ request.referrer }}">
+    <form id="saveForm" method="POST" action="{{ url_for('edit_docx_save', subpath=subpath) }}" style="display:none;">
+        <input type="hidden" name="version" value="{{ version }}">
         <textarea name="doc_html" id="doc_html_field"></textarea>
     </form>
 
     <script>
+        const heartbeatUrl = {{ url_for('edit_docx_heartbeat', subpath=subpath) | tojson }};
+        const cancelUrl = {{ url_for('edit_docx_cancel', subpath=subpath) | tojson }};
+
         function exec(command) {
             document.execCommand(command, false, null);
             document.getElementById('editor').focus();
@@ -173,6 +182,16 @@
             document.getElementById('doc_html_field').value = editor.innerHTML;
             document.getElementById('saveForm').submit();
         }
+
+        // Keep the soft lock alive every 60s while this tab is open
+        setInterval(() => {
+            fetch(heartbeatUrl, { method: "POST" }).catch(() => {});
+        }, 60000);
+
+        // Best-effort release on tab close (not guaranteed, but helps)
+        window.addEventListener("beforeunload", () => {
+            navigator.sendBeacon(cancelUrl);
+        });
     </script>
 
 </body>
