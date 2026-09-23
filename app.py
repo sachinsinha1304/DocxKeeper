@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, flash
 from extension import socketio
 from utilities.docxDisplayHelper import listAllTeamFolder, listAllSubfolderInRepo, readDocxContent
 from utilities.docx_editor import get_docx_as_html, save_html_as_docx
@@ -7,6 +7,8 @@ from utilities.docx_create import (
     resolve_folder_path, create_new_repo, create_new_folder, create_new_docx
 )
 from pathlib import Path
+from utilities.document_versioning import list_versions, restore_version
+DOCS_ROOT = Path(__file__).resolve().parent / "documents"
 
 
 app = Flask(__name__)
@@ -46,20 +48,36 @@ def show_docx():
 @app.route("/all-docx/<path:subpath>")
 def show_docx_in_repo(subpath):
     if 'email' not in session:
-            return redirect("/")
+        return redirect("/")
     try:
         contents, isFile = listAllSubfolderInRepo(subpath)
     except FileNotFoundError:
         return render_template("not_found.html", subpath=subpath), 404
 
     if isFile:
-        file_content = readDocxContent(contents['parent'], contents['name'])
+        parent_dir = contents['parent']
+        file_name = contents['name']
+        
+        # FIX: Directly build the absolute path using DOCS_ROOT and subpath
+        target_path = DOCS_ROOT / subpath
+        
+        # Fallback check if the file exists
+        if not target_path.exists():
+            # Try alternative resolution if your structure differs
+            target_path = Path(parent_dir) / file_name
+
+        file_content = readDocxContent(parent_dir, file_name)
+        
+        # Now list_versions will find the file correctly
+        versions = list_versions(target_path)
+
         return render_template(
             "view_file.html",
-            filename=contents['name'],
-            parent=contents['parent'],
+            filename=file_name,
+            parent=parent_dir,
             subpath=subpath,
-            content=file_content
+            content=file_content,
+            versions=versions
         )
 
     is_empty = len(contents) == 0
@@ -203,6 +221,45 @@ def create_docx_route(subpath):
         ), 400
 
     return redirect(url_for("show_docx_in_repo", subpath=subpath))
+
+# @app.route('/all-docx/<path:subpath>')
+# def view_docx(subpath):
+#     target_path = resolve_folder_path(subpath) # your path resolver
+#     filename = target_path.name
+    
+#     # Fetch content for reading...
+#     content = readDocxContent(target_path.parent, filename)
+    
+#     # Fetch version list for the history modal
+#     versions = list_versions(target_path)
+
+#     return render_template('view_docx.html', filename=filename, subpath=subpath, content=content, versions=versions)
+
+
+@app.route('/restore-docx/<version_id>', methods=['POST'])
+def restore_docx_route(version_id):
+    if 'email' not in session:
+        return redirect("/")
+        
+    # Get subpath from the hidden form field
+    subpath = request.form.get('subpath')
+    if not subpath:
+        flash("Invalid document path.", "danger")
+        return redirect(url_for('show_docx_in_repo', subpath=''))
+        
+    target_path = DOCS_ROOT / subpath
+    current_user = session.get('email', 'Admin')
+    
+    try:
+        # Restores the old snapshot and logs it automatically
+        restore_version(target_path, version_id, restored_by=current_user)
+        flash(f"Successfully restored version!", "success")
+    except Exception as e:
+        flash(f"Error restoring version: {e}", "danger")
+        
+    return redirect(url_for('show_docx_in_repo', subpath=subpath))
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)

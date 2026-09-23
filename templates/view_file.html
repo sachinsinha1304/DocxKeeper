@@ -12,7 +12,12 @@
         {% set parent_path = subpath.rsplit('/', 1)[0] if '/' in subpath else '' %}
         <a href="/all-docx/{{ parent_path }}" class="btn btn-secondary">⬅ Back to Explorer</a>
         
-        <a href="{{ url_for('edit_docx_view', subpath=subpath) }}" class="btn btn-warning">✏️ Edit Document</a>
+        <div>
+            <button type="button" class="btn btn-info text-white me-2" data-bs-toggle="modal" data-bs-target="#versionHistoryModal">
+                🕒 Version History
+            </button>
+            <a href="{{ url_for('edit_docx_view', subpath=subpath) }}" class="btn btn-warning">✏️ Edit Document</a>
+        </div>
     </div>
 
     <div class="card shadow-sm">
@@ -69,5 +74,66 @@
         </div>
     </div>
 
+    <!-- Version History Modal -->
+    <div class="modal fade" id="versionHistoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">📜 Document Version History</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {% if versions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Version</th>
+                                        <th>Modified By</th>
+                                        <th>Date & Time</th>
+                                        <th>Summary</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for v in versions %}
+                                        <tr class="{% if v.is_live %}table-success{% endif %}">
+                                            <td>
+                                                <strong>v{{ v.version_number }}</strong>
+                                                {% if v.is_live %}
+                                                    <span class="badge bg-success ms-1">Live</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ v.modified_by }}</td>
+                                            <td><small>{{ v.modified_at[:19].replace('T', ' ') }}</small></td>
+                                            <td>{{ v.change_summary or 'No summary provided' }}</td>
+                                            <td>
+                                                {% if not v.is_live %}
+                                                    <!-- FIX: Pass subpath via hidden input, keep only version_id in URL -->
+                                                    <form method="POST" action="{{ url_for('restore_docx_route', version_id=v.id) }}" onsubmit="return confirm('Are you sure you want to restore version {{ v.version_number }}? This will be logged as a new change.');">
+                                                        <input type="hidden" name="subpath" value="{{ subpath }}">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Restore</button>
+                                                    </form>
+                                                {% else %}
+                                                    <span class="text-muted small">Current</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center my-3">No version history available for this document yet.</p>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

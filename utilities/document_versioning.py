@@ -48,7 +48,9 @@ def _versions_dir(file_path: Path) -> Path:
 
 
 def _metadata_path(file_path: Path) -> Path:
-    return _versions_dir(file_path) / "versions.json"
+    meta_path = _versions_dir(file_path) / "versions.json"
+    print(f"DEBUG: Looking for metadata at -> {meta_path.resolve()}")
+    return meta_path
 
 
 # ---------------------------------------------------------------------------
@@ -206,9 +208,31 @@ def _write_version_record(file_path, new_bytes, modified_by, change_summary, cha
 
 
 def list_versions(file_path) -> list:
-    """Returns version history, newest last. Each entry has version_number,
-    modified_by, modified_at, change_summary, and a diff preview."""
-    return load_metadata(Path(file_path))
+    """Returns version history, newest last. Auto-seeds history if 
+       the file exists but has no metadata ledger yet (legacy files)."""
+    file_path = Path(file_path)
+    versions = load_metadata(file_path)
+    print(file_path)
+    print(versions)
+    
+    if not versions and file_path.exists():
+        try:
+            # Auto-seed v1 for files created before versioning was integrated
+            record = _write_version_record(
+                file_path=file_path,
+                new_bytes=file_path.read_bytes(),
+                modified_by="System",
+                change_summary="Auto-seeded initial version",
+                change_type="created",
+                old_text="",
+                next_number=1
+            )
+            versions = [record]
+            save_metadata(file_path, versions)
+        except Exception:
+            pass # Fail gracefully if read/write fails
+            
+    return versions
 
 
 def restore_version(file_path, version_id: str, restored_by: str) -> dict:
