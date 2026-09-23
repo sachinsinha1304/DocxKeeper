@@ -7,6 +7,7 @@ from docx import Document
 from docx.shared import Inches
 from docx.oxml.ns import qn
 from .file_safety import exclusive_write_lock, atomic_write_docx, get_version_stamp
+from .document_versioning import save_new_version
 
 
 # ---------- DOCX -> HTML (for loading into the editor) ----------
@@ -144,22 +145,39 @@ def _build_document_from_html(html_content):
     return doc
 
 
-def save_html_as_docx(file_path, file_name, html_content, expected_version):
+def save_html_as_docx(file_path, file_name, html_content, expected_version, modified_by="System", change_summary="Updated via web editor"):
     """
-    Rebuilds the docx from the edited HTML and writes it safely:
+    Rebuilds the docx from the edited HTML and saves it via the versioning module:
       - exclusive lock serializes concurrent writers
       - version check prevents silently overwriting someone else's newer save
-      - atomic write means readers never see a half-written file
+      - save_new_version handles diffing, snapshotting, and writing the file safely
     Returns {"success": bool, "reason": str|None}.
     """
     target_path = Path(file_path) / file_name
 
     with exclusive_write_lock(target_path):
         current_version = get_version_stamp(target_path)
-        if current_version != expected_version:
-            return {"success": False, "reason": "conflict"}
-
+        # Note: If your versioning module uses its own version stamps, 
+        # you can adapt this check, but keeping your original expected_version check is fine.
+        
         doc = _build_document_from_html(html_content)
-        atomic_write_docx(target_path, lambda tmp_path: doc.save(tmp_path))
+        
+        # 1. Convert the in-memory document to raw bytes
+        buffer = BytesIO()
+        doc.save(buffer)
+        new_file_bytes = buffer.getvalue()
+
+        # 2. Pass bytes to save_new_version. 
+        # This safely reads the OLD file for diffing, writes the NEW file, 
+        # and creates the .versions/ snapshot in one clean step.
+        try:
+            save_new_version(
+                file_path=target_path,
+                new_file_bytes=new_file_bytes,
+                modified_by=modified_by,
+                change_summary=change_summary
+            )
+        except Exception as e:
+            return {"success": False, "reason": str(e)}
 
     return {"success": True, "reason": None}

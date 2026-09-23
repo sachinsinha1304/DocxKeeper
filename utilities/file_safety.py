@@ -31,8 +31,15 @@ def _editing_lock_path(target_path: Path) -> Path:
 def exclusive_write_lock(target_path: Path, timeout=10):
     lock_file = _lock_path(target_path)
     lock_file.touch(exist_ok=True)
-    with portalocker.Lock(str(lock_file), timeout=timeout, mode="w") as fh:
-        yield fh
+    try:
+        with portalocker.Lock(str(lock_file), timeout=timeout, mode="w") as fh:
+            yield fh
+    finally:
+        # Optional: Clean up the physical lock file after release
+        try:
+            lock_file.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def atomic_write_docx(target_path: Path, save_fn):

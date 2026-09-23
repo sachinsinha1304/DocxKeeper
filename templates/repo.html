@@ -4,13 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-    <title>{{ current_path }}</title>
+    <title>{{ current_path if current_path else "Documents Root" }}</title>
 </head>
 <body>
     <div class="container mt-4">
 
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="mb-0">{{ current_path }}</h4>
+            <!-- Dynamic Breadcrumb Navigation -->
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/all-docx/">🏠 Documents</a></li>
+                    {% if current_path %}
+                        {% set parts = current_path.split('/') %}
+                        {% set ns = namespace(accum="") %}
+                        {% for part in parts %}
+                            {% set ns.accum = ns.accum + ("/" if ns.accum else "") + part %}
+                            {% if loop.last %}
+                                <li class="breadcrumb-item active" aria-current="page">{{ part }}</li>
+                            {% else %}
+                                <li class="breadcrumb-item"><a href="/all-docx/{{ ns.accum }}">{{ part }}</a></li>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </ol>
+            </nav>
+
             <div>
                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createFolderModal">
                     📁 New Folder
@@ -28,11 +46,13 @@
         {% if isEmpty %}
             <p class="text-muted">This folder is empty.</p>
         {% else %}
-            {% for item in folder_list %}
-                <a type="button" class="btn btn-primary" href="/all-docx/{{ item.route_path }}">
-                    {% if item.is_file %}📄{% else %}📁{% endif %} {{ item.name }}
-                </a>
-            {% endfor %}
+            <div class="list-group">
+                {% for item in folder_list %}
+                    <a type="button" class="btn btn-primary mb-2 text-start" href="/all-docx/{{ item.route_path }}">
+                        {% if item.is_file %}📄{% else %}📁{% endif %} {{ item.name }}
+                    </a>
+                {% endfor %}
+            </div>
         {% endif %}
     </div>
 

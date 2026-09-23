@@ -12,7 +12,7 @@ import json
 
 
 path = r"./documents/"
-HIDDEN_SUFFIXES = (".lock", ".editing.json", ".tmp")
+HIDDEN_SUFFIXES = (".lock", ".editing.json", ".tmp", ".versions")
 
 def listAllTeamFolder():
     target_path = Path(path)
@@ -38,12 +38,13 @@ def listAllSubfolderInRepo(repo_name):
 
     contents = []
     for item in target_path.iterdir():
-        contents.append({
-            "name": item.name,
-            "is_file": item.is_file(),
-            "route_path": f"{repo_name}/{item.name}" if repo_name else item.name,
-        })
-
+        if item.name not in HIDDEN_SUFFIXES:
+            contents.append({
+                "name": item.name,
+                "is_file": item.is_file(),
+                "route_path": f"{repo_name}/{item.name}" if repo_name else item.name,
+            })
+    print(contents)
     return contents, False
 
 

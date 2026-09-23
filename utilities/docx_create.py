@@ -1,8 +1,9 @@
 import re
 from pathlib import Path
 from docx import Document
+from .document_versioning import save_new_version
 
-# Replace with your ACTUAL root constant/import — see note at the end
+# Replace with your ACTUAL root constant/import
 DOCUMENTS_ROOT = Path(__file__).resolve().parent.parent / "documents"
 
 
@@ -45,8 +46,8 @@ def create_new_folder(directory_path, folder_name: str):
     return True, "Folder created.", clean_name
 
 
-def create_new_docx(directory_path, file_name: str):
-    """Creates a new blank .docx inside an existing repo/folder."""
+def create_new_docx(directory_path, file_name: str, author: str = "System"):
+    """Creates a new blank .docx inside an existing repo/folder and seeds version tracking."""
     directory_path = Path(directory_path)
     if not directory_path.exists() or not directory_path.is_dir():
         return False, "Target folder does not exist.", None
@@ -64,6 +65,17 @@ def create_new_docx(directory_path, file_name: str):
     doc = Document()
     doc.add_paragraph("")
     doc.save(target_path)
+
+    # Initialize version logging for the newly created document
+    try:
+        save_new_version(
+            file_path=target_path,
+            new_file_bytes=target_path.read_bytes(),
+            modified_by=author,
+            change_summary="Initial document creation"
+        )
+    except Exception:
+        pass  # Fallback if version tracking initialization fails
 
     return True, "Document created.", clean_name
 
