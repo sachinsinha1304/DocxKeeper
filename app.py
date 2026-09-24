@@ -8,12 +8,28 @@ from utilities.docx_create import (
 )
 from pathlib import Path
 from utilities.document_versioning import list_versions, restore_version
+from models import User, db
+
+from routes.user_routes import user_bp
+
 DOCS_ROOT = Path(__file__).resolve().parent / "documents"
 
 
 app = Flask(__name__)
 socketio.init_app(app)
 app.secret_key = 'your_super_secret_and_random_string'
+
+app.register_blueprint(user_bp)
+
+# --- ADD THIS CONFIGURATION ---
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///documents.db'  # Or your preferred database URI
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+
+# 3. Create database tables automatically if they don't exist
+with app.app_context():
+    db.create_all()
 
 
 def resolve_file(subpath):
@@ -33,8 +49,13 @@ def resolve_file(subpath):
 @app.route("/", methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        session['email'] = request.form.get("email")
-        return redirect("all-docx")
+        email = request.form.get("email")
+        user = User.query.filter_by(email=email).first()
+        if user:
+            session['email'] = user.email
+            session['role'] = user.role  # Store role in session
+            return redirect(url_for('show_docx'))
+        flash("User not found in database.", "danger")
     return render_template("login.html")
 
 
