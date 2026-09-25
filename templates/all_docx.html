@@ -11,16 +11,20 @@
 
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="mb-0">Repos</h4>
-            <!-- Grouped action buttons & restricted Manage Users to admin role -->
+            <!-- Action buttons: Manage Users (admin only), New Repo, and Logout -->
             <div>
                 {% if session.get('role') == 'admin' %}
                     <a class="btn btn-outline-primary me-2" href="/users/manage">
                         Manage Users
                     </a>
                 {% endif %}
-                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createRepoModal">
+                <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#createRepoModal">
                     ➕ New Repo
                 </button>
+                <!-- Logout Button -->
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
+                    🚪 Logout
+                </a>
             </div>
         </div>
 

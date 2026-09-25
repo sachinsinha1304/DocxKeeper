@@ -8,7 +8,8 @@ from utilities.docx_create import (
 )
 from pathlib import Path
 from utilities.document_versioning import list_versions, restore_version
-from models import User, db
+from db.db import init_db
+from db.UserDataAccess import getUserByEmail
 
 from routes.user_routes import user_bp
 
@@ -21,15 +22,8 @@ app.secret_key = 'your_super_secret_and_random_string'
 
 app.register_blueprint(user_bp)
 
-# --- ADD THIS CONFIGURATION ---
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///documents.db'  # Or your preferred database URI
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-db.init_app(app)
-
-# 3. Create database tables automatically if they don't exist
 with app.app_context():
-    db.create_all()
+    init_db()
 
 
 def resolve_file(subpath):
@@ -48,15 +42,24 @@ def resolve_file(subpath):
 
 @app.route("/", methods=['GET', 'POST'])
 def login():
+    if 'email' in session:
+        return redirect(url_for('show_docx'))
     if request.method == 'POST':
         email = request.form.get("email")
-        user = User.query.filter_by(email=email).first()
+        password = request.form.get("password")
+        user = getUserByEmail(email, password)
+
         if user:
-            session['email'] = user.email
-            session['role'] = user.role  # Store role in session
+            session['email'] = user['email']
+            session['role'] = user['role']  # Store role in session
             return redirect(url_for('show_docx'))
         flash("User not found in database.", "danger")
     return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()  # Clears all session data (email, role, etc.)
+    return redirect(url_for('login'))
 
 
 @app.route("/all-docx")

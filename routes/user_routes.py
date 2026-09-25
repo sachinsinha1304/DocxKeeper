@@ -2,6 +2,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from functools import wraps
 from models import db, User
 
+from db.UserDataAccess import getAllUsers, createUser, editUser, deleteUser
+
 user_bp = Blueprint('user_bp', __name__, url_prefix='/users')
 
 def admin_required(f):
@@ -17,7 +19,7 @@ def admin_required(f):
 @user_bp.route('/manage', methods=['GET'])
 @admin_required
 def manage_users():
-    users = User.query.all()
+    users = getAllUsers()
     return render_template('manage.html', users=users)
 
 @user_bp.route('/create', methods=['POST'])
@@ -25,32 +27,26 @@ def manage_users():
 def create_user():
     email = request.form.get('email')
     role = request.form.get('role', 'user')
-    
-    if User.query.filter_by(email=email).first():
-        flash("User with this email already exists.", "danger")
-    else:
-        new_user = User(email=email, role=role)
-        db.session.add(new_user)
-        db.session.commit()
-        flash("User created successfully.", "success")
+    password = request.form.get('password')
+    if not createUser(email, password, role):
+        flash("User created successfully.", "success") 
         
     return redirect(url_for('user_bp.manage_users'))
 
 @user_bp.route('/edit/<int:user_id>', methods=['POST'])
 @admin_required
 def edit_user(user_id):
-    user = User.query.get_or_404(user_id)
-    user.email = request.form.get('email')
-    user.role = request.form.get('role')
-    db.session.commit()
-    flash("User updated successfully.", "success")
+    print(user_id)
+    email = request.form.get('email')
+    role = request.form.get('role')
+    password = request.form.get('password')
+    if not editUser(email, password, role, user_id):
+        flash("User updated successfully.", "success")
     return redirect(url_for('user_bp.manage_users'))
 
 @user_bp.route('/delete/<int:user_id>', methods=['POST'])
 @admin_required
 def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    flash("User deleted successfully.", "success")
+    if not deleteUser(user_id):
+        flash("User deleted successfully.", "success")
     return redirect(url_for('user_bp.manage_users'))
