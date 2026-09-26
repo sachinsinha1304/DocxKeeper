@@ -158,9 +158,10 @@ def edit_docx_save(subpath):
     expected_version = request.form.get("version")
     email = session["email"]
 
-    result = save_html_as_docx(parent, name, html_content, expected_version)
+    result = save_html_as_docx(parent, name, html_content, expected_version, email)
 
     if not result["success"]:
+        print(subpath)
         return render_template(
             "edit_conflict.html", filename=name, subpath=subpath, doc_html=html_content
         ), 409
@@ -229,13 +230,14 @@ def create_folder_route(subpath):
 def create_docx_route(subpath):
     """Inside a repo/folder: creates a new blank .docx."""
     new_name = request.form.get("new_filename", "")
+    email = session['email']
 
     try:
         directory_path = resolve_folder_path(subpath)
     except FileNotFoundError:
         return render_template("not_found.html", subpath=subpath), 404
 
-    success, message, final_name = create_new_docx(directory_path, new_name)
+    success, message, final_name = create_new_docx(directory_path, new_name, email)
 
     if not success:
         contents, _ = listAllSubfolderInRepo(subpath)
