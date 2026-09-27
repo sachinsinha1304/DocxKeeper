@@ -2,25 +2,18 @@
 document_versioning.py
 
 Adds version history + audit tracking on top of the existing filesystem-based
-document store (repos/subfolders/*.docx). Designed to drop in next to your
-existing utility files (repo_utils.py, docx_reader.py, etc.) with no DB
-required — metadata is kept in a JSON sidecar file per document.
+document store (repos/subfolders/*.docx). Metadata is stored in a MySQL table,
+while physical snapshots of old versions are kept in a local .versions/ directory.
 
 Layout on disk:
-
   /documents
     /repo_name
       /subfolder
-        report.docx                <- current/live file, unchanged location
+        report.docx                 <- current/live file, unchanged location
         .versions/
           report.docx/
-            versions.json          <- ordered metadata for this file
-            3f9a1b2c-....docx      <- snapshot of an old version
+            3f9a1b2c-....docx       <- snapshot of an old version
             7d2e4f11-....docx
-
-Swap-in note: every function here takes/returns plain dicts, so if you later
-move metadata into a real DB, only save_metadata()/load_metadata() need to
-change — nothing else in this file or its callers.
 """
 
 import difflib
@@ -30,6 +23,7 @@ import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from db.db import get_db_connection
 
 from .docxDisplayHelper import readDocxContent  # your existing module; adjust import path
 
@@ -37,39 +31,91 @@ VERSIONS_DIRNAME = ".versions"
 
 
 # ---------------------------------------------------------------------------
-# Paths
+# Paths (Filesystem for snapshots only)
 # ---------------------------------------------------------------------------
 
 def _versions_dir(file_path: Path) -> Path:
-    """.versions/<filename>/ sits alongside the live file, hidden by your
-    existing HIDDEN_SUFFIXES-style filtering if you also exclude dotfolders."""
+    """-versions/<filename>/ sits alongside the live file for binary snapshots."""
     file_path = Path(file_path)
     return file_path.parent / VERSIONS_DIRNAME / file_path.name
 
 
-def _metadata_path(file_path: Path) -> Path:
-    meta_path = _versions_dir(file_path) / "versions.json"
-    print(f"DEBUG: Looking for metadata at -> {meta_path.resolve()}")
-    return meta_path
-
-
 # ---------------------------------------------------------------------------
-# Metadata read/write
+# Metadata read/write (MySQL Implementation)
 # ---------------------------------------------------------------------------
 
 def load_metadata(file_path: Path) -> list:
-    meta_path = _metadata_path(file_path)
-    if not meta_path.exists():
-        return []
-    with open(meta_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    path_str = str(Path(file_path).resolve())
+    conn = get_db_connection()
+    try:
+        with conn.cursor(dictionary=True) as cursor:
+            query = """
+                SELECT id, version_number, file_name, is_live, file_hash, 
+                       modified_by, modified_at, change_type, change_summary, diff_json
+                FROM document_versions
+                WHERE file_path = %s
+                ORDER BY version_number ASC
+            """
+            cursor.execute(query, (path_str,))
+            rows = cursor.fetchall()
+            
+            versions = []
+            for row in rows:
+                # Reconstruct the dictionary format expected by the app
+                diff_data = row["diff_json"]
+                if isinstance(diff_data, str):
+                    diff_data = json.loads(diff_data)
+                
+                versions.append({
+                    "id": row["id"],
+                    "version_number": row["version_number"],
+                    "file_name": row["file_name"],
+                    "is_live": bool(row["is_live"]),
+                    "file_hash": row["file_hash"],
+                    "modified_by": row["modified_by"],
+                    "modified_at": row["modified_at"],
+                    "change_type": row["change_type"],
+                    "change_summary": row["change_summary"],
+                    "diff": diff_data
+                })
+            return versions
+    finally:
+        conn.close()
 
 
 def save_metadata(file_path: Path, versions: list) -> None:
-    meta_path = _metadata_path(file_path)
-    meta_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(meta_path, "w", encoding="utf-8") as f:
-        json.dump(versions, f, indent=2, ensure_ascii=False)
+    path_str = str(Path(file_path).resolve())
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Sync entire version list for this file using an UPSERT pattern
+            for v in versions:
+                diff_str = json.dumps(v.get("diff")) if v.get("diff") else None
+                sql = """
+                    INSERT INTO document_versions 
+                    (id, file_path, version_number, file_name, is_live, file_hash, 
+                     modified_by, modified_at, change_type, change_summary, diff_json)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE 
+                    is_live = VALUES(is_live),
+                    change_summary = VALUES(change_summary)
+                """
+                cursor.execute(sql, (
+                    v["id"],
+                    path_str,
+                    v["version_number"],
+                    v["file_name"],
+                    1 if v["is_live"] else 0,
+                    v["file_hash"],
+                    v["modified_by"],
+                    v["modified_at"],
+                    v["change_type"],
+                    v["change_summary"],
+                    diff_str
+                ))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +149,7 @@ def _extract_plain_text(file_path: Path) -> str:
 
 def _diff_summary(old_text: str, new_text: str, max_lines: int = 40) -> dict:
     """Line-level diff between two text extractions. Returns added/removed
-    line counts plus a capped unified diff for display in a UI."""
+    line counts plus a filtered preview containing ONLY added/removed lines."""
     old_lines = old_text.splitlines()
     new_lines = new_text.splitlines()
     diff = list(difflib.unified_diff(old_lines, new_lines, lineterm=""))
@@ -111,14 +157,19 @@ def _diff_summary(old_text: str, new_text: str, max_lines: int = 40) -> dict:
     added = sum(1 for l in diff if l.startswith("+") and not l.startswith("+++"))
     removed = sum(1 for l in diff if l.startswith("-") and not l.startswith("---"))
 
+    # Keep ONLY lines that were explicitly added (+) or removed (-)
+    filtered_preview = [
+        l for l in diff 
+        if (l.startswith("+") and not l.startswith("+++")) or 
+           (l.startswith("-") and not l.startswith("---"))
+    ]
+
     return {
         "lines_added": added,
         "lines_removed": removed,
-        "preview": diff[:max_lines],
-        "truncated": len(diff) > max_lines,
+        "preview": filtered_preview[:max_lines],
+        "truncated": len(filtered_preview) > max_lines,
     }
-
-
 # ---------------------------------------------------------------------------
 # Core operations
 # ---------------------------------------------------------------------------
@@ -129,17 +180,6 @@ def save_new_version(
     modified_by: str,
     change_summary: str = None,
 ) -> dict:
-    """
-    Call this whenever a user uploads a replacement for an existing .docx.
-
-    1. Hashes the incoming bytes; if identical to the current live file, does
-       nothing (no-op save) and returns the existing latest version's record.
-    2. Otherwise: snapshots the CURRENT live file into .versions/ before
-       overwriting it, computes a text diff for the "what changed" record,
-       writes the new bytes to the live path, and appends a new version entry.
-
-    Returns the metadata dict for the newly created version.
-    """
     file_path = Path(file_path)
     if not file_path.exists():
         raise FileNotFoundError(f"{file_path} does not exist")
@@ -147,8 +187,6 @@ def save_new_version(
     versions = load_metadata(file_path)
     new_hash = hashlib.sha256(new_file_bytes).hexdigest()
 
-    # first-ever save: seed history with the file's current state as v1,
-    # then fall through to record the incoming bytes as v2 if it differs.
     if not versions:
         versions.append(_write_version_record(
             file_path, file_path.read_bytes(), modified_by, "Initial version", "created",
@@ -160,7 +198,6 @@ def save_new_version(
 
     current_hash = versions[-1]["file_hash"]
     if new_hash == current_hash:
-        # nothing actually changed — don't spam version history
         return versions[-1]
 
     old_text = _extract_plain_text(file_path)  # live file, pre-overwrite
@@ -176,9 +213,7 @@ def save_new_version(
 
 
 def _write_version_record(file_path, new_bytes, modified_by, change_summary, change_type,
-                           old_text="", next_number=1):
-    """Writes new_bytes to the live file, snapshots the result into
-    .versions/, and returns the metadata record for this version."""
+                          old_text="", next_number=1):
     file_path = Path(file_path)
     vdir = _versions_dir(file_path)
     vdir.mkdir(parents=True, exist_ok=True)
@@ -208,16 +243,11 @@ def _write_version_record(file_path, new_bytes, modified_by, change_summary, cha
 
 
 def list_versions(file_path) -> list:
-    """Returns version history, newest last. Auto-seeds history if 
-       the file exists but has no metadata ledger yet (legacy files)."""
     file_path = Path(file_path)
     versions = load_metadata(file_path)
-    print(file_path)
-    print(versions)
     
     if not versions and file_path.exists():
         try:
-            # Auto-seed v1 for files created before versioning was integrated
             record = _write_version_record(
                 file_path=file_path,
                 new_bytes=file_path.read_bytes(),
@@ -230,17 +260,12 @@ def list_versions(file_path) -> list:
             versions = [record]
             save_metadata(file_path, versions)
         except Exception:
-            pass # Fail gracefully if read/write fails
+            pass
             
     return versions
 
 
 def restore_version(file_path, version_id: str, restored_by: str) -> dict:
-    """
-    Restores an old snapshot as the new live content. Does NOT delete any
-    history — creates a fresh version entry with change_type='restored', so
-    the timeline stays honest (you can see a restore happened and when).
-    """
     file_path = Path(file_path)
     versions = load_metadata(file_path)
     vdir = _versions_dir(file_path)
@@ -268,7 +293,6 @@ def restore_version(file_path, version_id: str, restored_by: str) -> dict:
 
 
 def get_audit_trail(file_path) -> list:
-    """Flattened who/when/what list, newest first — convenient for a UI table."""
     versions = list_versions(file_path)
     trail = []
     for v in reversed(versions):
