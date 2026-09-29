@@ -12,6 +12,7 @@ from db.db import init_db
 from db.UserDataAccess import getUserByEmail
 
 from routes.user_routes import user_bp
+from routes.search_routes import search_bp
 
 DOCS_ROOT = Path(__file__).resolve().parent / "documents"
 
@@ -21,6 +22,7 @@ socketio.init_app(app)
 app.secret_key = 'your_super_secret_and_random_string'
 
 app.register_blueprint(user_bp)
+app.register_blueprint(search_bp)
 
 with app.app_context():
     init_db()

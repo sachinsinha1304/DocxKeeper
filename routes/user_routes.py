@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from functools import wraps
-from models import db, User
 
 from db.UserDataAccess import getAllUsers, createUser, editUser, deleteUser
 
