@@ -106,7 +106,7 @@
         <h1>📄 {{ filename }}</h1>
         <div class="actions" style="display:flex; align-items:center;">
             <span class="save-status" id="saveStatus"></span>
-            <a href="{{ url_for('show_docx_in_repo', subpath=subpath) }}" class="btn btn-secondary">Cancel</a>
+            <a href="{{ url_for('repository.show_docx_in_repo', subpath=subpath) }}" class="btn btn-secondary">Cancel</a>
             <button class="btn btn-primary" onclick="saveDoc()">Save</button>
         </div>
     </div>
@@ -132,14 +132,14 @@
         <div class="page" id="editor" contenteditable="true">{{ doc_html | safe }}</div>
     </div>
 
-    <form id="saveForm" method="POST" action="{{ url_for('edit_docx_save', subpath=subpath) }}" style="display:none;">
+    <form id="saveForm" method="POST" action="{{ url_for('document.edit_docx_save', subpath=subpath) }}" style="display:none;">
         <input type="hidden" name="version" value="{{ version }}">
         <textarea name="doc_html" id="doc_html_field"></textarea>
     </form>
 
     <script>
-        const heartbeatUrl = {{ url_for('edit_docx_heartbeat', subpath=subpath) | tojson }};
-        const cancelUrl = {{ url_for('edit_docx_cancel', subpath=subpath) | tojson }};
+        const heartbeatUrl = {{ url_for('document.edit_docx_heartbeat', subpath=subpath) | tojson }};
+        const cancelUrl = {{ url_for('document.edit_docx_cancel', subpath=subpath) | tojson }};
 
         function exec(command) {
             document.execCommand(command, false, null);

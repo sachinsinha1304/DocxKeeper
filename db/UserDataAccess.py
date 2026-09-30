@@ -1,6 +1,4 @@
 # db.py
-import mysql.connector
-from mysql.connector import pooling
 from werkzeug.security import check_password_hash, generate_password_hash
 from .db import get_db_connection
 
@@ -66,6 +64,7 @@ def editUser(user, password, role, user_id):
     try:
         query = 'update documents_db.users set email = %s, password = %s,  role = %s where id = %s'
         cursor.execute(query, (user, generate_password_hash(password), role, user_id))
+        con.commit()
         return 0
     except Exception as ex:
         print(ex)

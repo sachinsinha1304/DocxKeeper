@@ -24,9 +24,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from db.db import get_db_connection
-
 from .docxDisplayHelper import readDocxContent  # your existing module; adjust import path
-
 VERSIONS_DIRNAME = ".versions"
 
 
@@ -307,3 +305,47 @@ def get_audit_trail(file_path) -> list:
             "lines_removed": diff.get("lines_removed"),
         })
     return trail
+
+def get_version_path(
+    target_path,
+    version_id
+):
+
+    target_path = Path(target_path)
+
+    version_directory = (
+        target_path.parent
+        / ".versions"
+        / target_path.name
+    )
+
+    version_path = (
+        version_directory
+        / f"{version_id}.docx"
+    )
+
+    print(version_path)
+
+    return version_path
+
+def read_version_content(version_path):
+    """
+    Reads a version snapshot using the same DOCX reader
+    used for normal documents.
+    """
+    version_path = Path(version_path)
+
+    if not version_path.exists():
+        raise FileNotFoundError(
+            f"Version file not found: {version_path}"
+        )
+
+    if version_path.suffix.lower() != ".docx":
+        raise ValueError(
+            f"Version is not a DOCX file: {version_path}"
+        )
+
+    return readDocxContent(
+        version_path.parent,
+        version_path.name
+    )

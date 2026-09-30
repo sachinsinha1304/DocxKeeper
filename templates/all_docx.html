@@ -23,7 +23,7 @@
                     ➕ New Repo
                 </button>
                 <!-- Logout Button -->
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger">
                     🚪 Logout
                 </a>
             </div>
@@ -47,7 +47,7 @@
     <div class="modal fade" id="createRepoModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="POST" action="{{ url_for('create_repo_route') }}">
+                <form method="POST" action="{{ url_for('repository.create_repo_route') }}">
                     <div class="modal-header">
                         <h5 class="modal-title">Create New Repo</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
