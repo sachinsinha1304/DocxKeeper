@@ -1,116 +1,170 @@
 {% include 'header.html' %}
-<body>
+<body class="bg-dark text-light font-sans antialiased position-relative">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <!-- Safely extracts the parent directory from subpath and routes back to the explorer -->
-        {% set parent_path = subpath.rsplit('/', 1)[0] if '/' in subpath else '' %}
-        <a href="/all-docx/{{ parent_path }}" class="btn btn-secondary">⬅ Back to Explorer</a>
-        
-        <div>
-            <button type="button" class="btn btn-info text-white me-2" data-bs-toggle="modal" data-bs-target="#versionHistoryModal">
-                🕒 Version History
-            </button>
-            <a href="{{ url_for('document.edit_docx_view', subpath=subpath) }}" class="btn btn-warning">✏️ Edit Document</a>
+    <!-- Background ambient glowing spheres -->
+    <div class="ambient-glow"></div>
+    <div class="ambient-glow-2"></div>
+
+    <!-- Top Workspace Utility Bar -->
+    <div class="container-fluid py-3 px-4 position-relative border-bottom border-secondary border-opacity-10" style="z-index: 1; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(10px);">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 max-w-7xl mx-auto">
+            {% set parent_path = subpath.rsplit('/', 1)[0] if '/' in subpath else '' %}
+            <a href="/all-docx/{{ parent_path }}" class="btn btn-sm btn-outline-light px-3 py-1.5 rounded-pill shadow-sm transition-all d-flex align-items-center gap-2 border-secondary border-opacity-50">
+                <i class="bi bi-arrow-left"></i> Explorer
+            </a>
+            
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted small d-none d-md-inline me-2"><i class="bi bi-cloud-check text-success"></i> Saved to workspace</span>
+                <button type="button" class="btn btn-sm btn-dark px-3 py-1.5 rounded-pill shadow-sm d-flex align-items-center gap-2 border border-secondary border-opacity-50 text-light" data-bs-toggle="modal" data-bs-target="#versionHistoryModal">
+                    <i class="bi bi-clock-history text-info"></i> Version History
+                </button>
+                <a href="{{ url_for('document.edit_docx_view', subpath=subpath) }}" class="btn btn-sm px-3 py-1.5 rounded-pill shadow-sm fw-semibold d-flex align-items-center gap-2 text-white" style="background: var(--primary-gradient); border: none;">
+                    <i class="bi bi-pencil"></i> Edit Page
+                </a>
+            </div>
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h3 class="mb-0">📄 {{ filename }}</h3>
-        </div>
-        <div class="card-body bg-light">
-            {% if content %}
-                <div class="document-body p-3 bg-white border rounded">
-                    {% for item in content %}
-
-                        {% if item.type == "heading" %}
-                            {% if item.level == 1 %}
-                                <h1>{{ item.text }}</h1>
-                            {% elif item.level == 2 %}
-                                <h2>{{ item.text }}</h2>
-                            {% elif item.level == 3 %}
-                                <h3>{{ item.text }}</h3>
-                            {% else %}
-                                <h4>{{ item.text }}</h4>
-                            {% endif %}
-
-                        {% elif item.type == "paragraph" %}
-                            <p class="lead" style="font-size: 1.1rem; line-height: 1.6;">{{ item.text }}</p>
-
-                        {% elif item.type == "image" %}
-                            <div class="my-3 text-center">
-                                <img src="{{ item.src }}" class="img-fluid rounded border" alt="Document image">
+    <!-- Confluence / Notion Style Document Canvas Workspace -->
+    <div class="container py-5 position-relative" style="z-index: 1;">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10 col-xl-9">
+                
+                <!-- Main Paper Sheet (Simulating an actual editable Page / Word Document) -->
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden document-sheet p-4 p-md-5 bg-white text-dark">
+                    
+                    <!-- Page Header Meta (Confluence Style) -->
+                    <div class="page-meta pb-4 mb-4 border-bottom d-flex justify-content-between align-items-start flex-wrap gap-3">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 text-muted small mb-2">
+                                <i class="bi bi-file-earmark-word text-primary fs-5"></i>
+                                <span>Workspace Document</span>
+                                <i class="bi bi-dot"></i>
+                                <span>Subpath: {{ subpath }}</span>
                             </div>
+                            <h1 class="page-title fw-bold text-dark display-6 mb-0">{{ filename }}</h1>
+                        </div>
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill fw-semibold">
+                            <i class="bi bi-circle-fill small me-1" style="font-size: 8px;"></i> Published Live
+                        </span>
+                    </div>
 
-                        {% elif item.type == "table" %}
-                            <div class="table-responsive my-3">
-                                <table class="table table-bordered table-striped">
-                                    {% for row in item.rows %}
-                                        <tr>
-                                            {% for cell in row %}
-                                                <td>{{ cell }}</td>
+                    <!-- Page Body Content (Rich Text Layout) -->
+                    <div class="document-body py-2">
+                        {% if content %}
+                            {% for item in content %}
+
+                                {% if item.type == "heading" %}
+                                    {% if item.level == 1 %}
+                                        <h1 class="fw-bold text-dark mt-5 mb-3 pb-2 border-bottom fs-3"><span class="text-primary me-2">#</span>{{ item.text }}</h1>
+                                    {% elif item.level == 2 %}
+                                        <h2 class="fw-semibold text-secondary mt-4 mb-3 fs-4"><span class="text-primary me-2">##</span>{{ item.text }}</h2>
+                                    {% elif item.level == 3 %}
+                                        <h3 class="fw-medium text-dark mt-4 mb-2 fs-5"><span class="text-primary me-2">###</span>{{ item.text }}</h3>
+                                    {% else %}
+                                        <h4 class="fw-medium text-muted mt-3 mb-2 fs-6">{{ item.text }}</h4>
+                                    {% endif %}
+
+                                {% elif item.type == "paragraph" %}
+                                    <p class="text-secondary lh-lg mb-4" style="font-size: 1.05rem; letter-spacing: -0.01em;">{{ item.text }}</p>
+
+                                {% elif item.type == "image" %}
+                                    <div class="my-4 text-center p-3 bg-light rounded-3 border">
+                                        <img src="{{ item.src }}" class="img-fluid rounded shadow-sm border bg-white" alt="Document image" style="max-height: 450px;">
+                                        <div class="text-muted small mt-2 fst-italic">Embedded Document Visual Asset</div>
+                                    </div>
+
+                                {% elif item.type == "table" %}
+                                    <div class="table-responsive my-4 rounded-3 border shadow-sm">
+                                        <table class="table table-hover align-middle mb-0 bg-white">
+                                            {% for row in item.rows %}
+                                                <tr class="{% if loop.first %}table-light fw-bold text-uppercase fs-7 text-dark border-bottom{% endif %}">
+                                                    {% for cell in row %}
+                                                        <td class="px-3 py-3 border-end last-border-0">{{ cell }}</td>
+                                                    {% endfor %}
+                                                </tr>
                                             {% endfor %}
-                                        </tr>
-                                    {% endfor %}
-                                </table>
+                                        </table>
+                                    </div>
+
+                                {% elif item.type == "error" %}
+                                    <div class="alert alert-danger rounded-3 shadow-sm d-flex align-items-center p-3 my-3">
+                                        <i class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2"></i>
+                                        <div>{{ item.text }}</div>
+                                    </div>
+
+                                {% endif %}
+
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <div class="display-5 text-muted mb-3"><i class="bi bi-journal-richtext"></i></div>
+                                <p class="text-muted fst-italic">This document canvas is currently empty.</p>
+                                <a href="{{ url_for('document.edit_docx_view', subpath=subpath) }}" class="btn btn-sm btn-primary rounded-pill px-4 mt-2">Start writing content</a>
                             </div>
-
-                        {% elif item.type == "error" %}
-                            <div class="alert alert-danger">{{ item.text }}</div>
-
                         {% endif %}
+                    </div>
 
-                    {% endfor %}
+                    <!-- Page Footer / Comments Section Placeholder -->
+                    <div class="mt-5 pt-4 border-top text-muted small d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-shield-check me-1"></i> Managed via Collaborative Version Control</span>
+                        <span>Doc ID: {{ subpath }}</span>
+                    </div>
+
                 </div>
-            {% else %}
-                <p class="text-muted fst-italic">This file appears to be empty.</p>
-            {% endif %}
+
+            </div>
         </div>
     </div>
 
-    <!-- Version History Modal -->
+    <!-- Version History Modal (Confluence Style Overlay) -->
     <div class="modal fade" id="versionHistoryModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title">📜 Document Version History</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden" style="background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1) !important; color: #f8fafc;">
+                <div class="modal-header bg-transparent border-bottom border-secondary border-opacity-25 px-4 py-3">
+                    <h5 class="modal-title fw-bold text-white d-flex align-items-center gap-2">
+                        <i class="bi bi-clock-history text-info"></i> Page Version History & Audit Log
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     {% if versions %}
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle">
-                                <thead class="table-light">
+                        <div class="table-responsive rounded-3 shadow-sm border border-secondary border-opacity-25" style="background: rgba(15, 23, 42, 0.5);">
+                            <table class="table table-dark table-hover align-middle mb-0 bg-transparent">
+                                <thead class="border-bottom border-secondary border-opacity-25 text-uppercase fs-7 text-muted">
                                     <tr>
-                                        <th>Version</th>
-                                        <th>Modified By</th>
-                                        <th>Date & Time</th>
-                                        <th>Summary</th>
-                                        <th>Action</th>
+                                        <th class="py-3 bg-transparent">Version</th>
+                                        <th class="py-3 bg-transparent">Author</th>
+                                        <th class="py-3 bg-transparent">Timestamp</th>
+                                        <th class="py-3 bg-transparent">Change Summary</th>
+                                        <th class="py-3 bg-transparent text-end">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for v in versions %}
-                                        <tr class="{% if v.is_live %}table-success{% endif %}">
-                                            <td>
-                                                <strong>v{{ v.version_number }}</strong>
+                                        <tr class="border-secondary border-opacity-10 {% if v.is_live %}bg-success bg-opacity-10{% endif %}">
+                                            <td class="py-3 bg-transparent">
+                                                <strong class="text-white">v{{ v.version_number }}</strong>
                                                 {% if v.is_live %}
-                                                    <span class="badge bg-success ms-1">Live</span>
+                                                    <span class="badge bg-success ms-1 rounded-pill">Current</span>
                                                 {% endif %}
                                             </td>
-                                            <td>{{ v.modified_by }}</td>
-                                            <td><small>{{ v.modified_at[:19].replace('T', ' ') }}</small></td>
-                                            <td>{{ v.change_summary or 'No summary provided' }}</td>
-                                            <td>
+                                            <td class="py-3 bg-transparent text-light text-opacity-75">{{ v.modified_by }}</td>
+                                            <td class="py-3 bg-transparent text-muted"><small>{{ v.modified_at[:19].replace('T', ' ') }}</small></td>
+                                            <td class="py-3 bg-transparent text-light text-opacity-75 text-truncate" style="max-width: 180px;" title="{{ v.change_summary }}">
+                                                {{ v.change_summary or 'No summary provided' }}
+                                            </td>
+                                            <td class="py-3 bg-transparent text-end">
                                                 {% if not v.is_live %}
-                                                    <!-- FIX: Pass subpath via hidden input, keep only version_id in URL -->
-                                                     <a class="btn btn-sm btn-outline-danger" href="{{ url_for('version.view_specific_version',subpath=subpath, version_id=v.id) }}" > View </a>
-                                                    <form method="POST" action="{{ url_for('version.restore_docx_route', version_id=v.id) }}" onsubmit="return confirm('Are you sure you want to restore version {{ v.version_number }}? This will be logged as a new change.');">
-                                                        <input type="hidden" name="subpath" value="{{ subpath }}">
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Restore</button>
-                                                    </form>
+                                                    <div class="d-flex justify-content-end gap-1">
+                                                        <a class="btn btn-sm btn-outline-info rounded-pill px-3" href="{{ url_for('version.view_specific_version', subpath=subpath, version_id=v.id) }}">View</a>
+                                                        <form method="POST" action="{{ url_for('version.restore_docx_route', version_id=v.id) }}" onsubmit="return confirm('Restore version {{ v.version_number }}? This will create a new changelog entry.');" class="d-inline">
+                                                            <input type="hidden" name="subpath" value="{{ subpath }}">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">Restore</button>
+                                                        </form>
+                                                    </div>
                                                 {% else %}
-                                                    <span class="text-muted small">Current</span>
+                                                    <span class="text-muted small fw-semibold fst-italic">Active Page</span>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -119,15 +173,64 @@
                             </table>
                         </div>
                     {% else %}
-                        <p class="text-muted text-center my-3">No version history available for this document yet.</p>
+                        <div class="text-center py-4">
+                            <p class="text-muted my-3">No prior revisions recorded for this page yet.</p>
+                        </div>
                     {% endif %}
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <div class="modal-footer bg-transparent border-top border-secondary border-opacity-25 px-4 py-3">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Theme & Page Styling Stylesheet -->
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #31103f 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        .ambient-glow {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0,0,0,0) 70%);
+            top: -100px;
+            left: -100px;
+            z-index: 0;
+            filter: blur(40px);
+            pointer-events: none;
+        }
+
+        .ambient-glow-2 {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, rgba(0,0,0,0) 70%);
+            bottom: -100px;
+            right: -100px;
+            z-index: 0;
+            filter: blur(40px);
+            pointer-events: none;
+        }
+
+        /* The Document Sheet Card (Notion/Confluence Style Paper Layout) */
+        .document-sheet {
+            background: #ffffff !important;
+            color: #1e293b !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+            border-radius: 16px !important;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 </body>
