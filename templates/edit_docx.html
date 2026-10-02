@@ -1,283 +1,552 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editing - {{ filename }}</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    
-    <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #31103f 100%);
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            color: #f8fafc;
-            overflow-x: hidden;
-        }
-
-        /* Background ambient glowing spheres */
-        .ambient-glow {
-            position: fixed;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0,0,0,0) 70%);
-            top: -100px;
-            left: -100px;
-            z-index: 0;
-            filter: blur(40px);
-            pointer-events: none;
-        }
-
-        .ambient-glow-2 {
-            position: fixed;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(236, 72, 153, 0.15) 0%, rgba(0,0,0,0) 70%);
-            bottom: -100px;
-            right: -100px;
-            z-index: 0;
-            filter: blur(40px);
-            pointer-events: none;
-        }
-
-        /* Top sticky glassmorphism bar */
-        .topbar {
-            background: rgba(30, 41, 59, 0.85);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 12px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.3);
-        }
-        .topbar h1 {
-            font-size: 1.15rem;
-            margin: 0;
-            color: #f8fafc;
-            font-weight: 700;
-        }
-
-        /* Sticky toolbar */
-        .toolbar {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            padding: 8px 24px;
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            position: sticky;
-            top: 61px;
-            z-index: 99;
-            justify-content: center;
-        }
-        .toolbar button, .toolbar select {
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(30, 41, 59, 0.6);
-            color: #f8fafc;
-            padding: 6px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.2s ease;
-        }
-        .toolbar button:hover, .toolbar select:hover {
-            background: rgba(99, 102, 241, 0.2);
-            border-color: #818cf8;
-            color: #fff;
-        }
-        .toolbar select option {
-            background: #1e293b;
-            color: #fff;
-        }
-
-        /* Page canvas wrapper */
-        .page-wrapper {
-            display: flex;
-            justify-content: center;
-            padding: 40px 20px 100px;
-            position: relative;
-            z-index: 1;
-        }
-        
-        /* Actual physical paper sheet style */
-        .page {
-            background: #ffffff !important;
-            width: 816px;
-            min-height: 1056px;
-            padding: 80px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            outline: none;
-            font-size: 1.05rem;
-            line-height: 1.7;
-            color: #1e293b !important;
-        }
-        .page h1 { font-size: 2rem; font-weight: 700; margin: 24px 0 12px; color: #0f172a; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
-        .page h2 { font-size: 1.5rem; font-weight: 600; margin: 20px 0 10px; color: #334155; }
-        .page h3 { font-size: 1.25rem; font-weight: 600; margin: 16px 0 8px; color: #475569; }
-        .page p { margin: 12px 0; color: #334155; }
-        .page table { margin: 16px 0; border-collapse: collapse; width: 100%; }
-        .page table td, .page table th { padding: 8px 12px; border: 1px solid #cbd5e1; }
-        .page img { display: block; margin: 16px auto; max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-
-        /* Modernized Buttons */
-        .btn-custom-primary {
-            background: var(--primary-gradient);
-            color: #fff;
-            border: none;
-            padding: 7px 18px;
-            border-radius: 50px;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-            transition: all 0.2s;
-        }
-        .btn-custom-primary:hover {
-            opacity: 0.9;
-            color: #fff;
-            transform: translateY(-1px);
-        }
-        .btn-custom-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #f8fafc;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 7px 18px;
-            border-radius: 50px;
-            transition: all 0.2s;
-        }
-        .btn-custom-secondary:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-        }
-
-        .save-status {
-            font-size: 13px;
-            color: #94a3b8;
-            margin-right: 16px;
-            align-self: center;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editing - {{ filename }}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+:root{--primary-gradient:linear-gradient(135deg,#6366f1 0%,#a855f7 50%,#ec4899 100%)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#31103f 100%);font-family:'Segoe UI',system-ui,sans-serif;color:#f8fafc;overflow-x:hidden}
+.ambient-glow,.ambient-glow-2{position:fixed;width:400px;height:400px;z-index:0;filter:blur(40px);pointer-events:none}
+.ambient-glow{background:radial-gradient(circle,rgba(99,102,241,.15),transparent 70%);top:-100px;left:-100px}
+.ambient-glow-2{background:radial-gradient(circle,rgba(236,72,153,.15),transparent 70%);bottom:-100px;right:-100px}
+.topbar{background:rgba(30,41,59,.85);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar h1{font-size:1.15rem;margin:0;font-weight:700}
+.toolbar{background:rgba(15,23,42,.9);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06);padding:8px 16px;display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:61px;z-index:99;justify-content:center;align-items:center}
+.tgroup{display:flex;gap:4px;align-items:center;padding-right:8px;margin-right:2px;border-right:1px solid rgba(255,255,255,.1)}
+.tgroup:last-child{border:0}
+.toolbar button,.toolbar select{border:1px solid rgba(255,255,255,.1);background:rgba(30,41,59,.6);color:#f8fafc;padding:5px 10px;border-radius:8px;cursor:pointer;font-size:13px;transition:.2s}
+.toolbar button:hover,.toolbar select:hover{background:rgba(99,102,241,.25);border-color:#818cf8}
+.toolbar select option{background:#1e293b}
+.toolbar input[type=color]{width:28px;height:28px;padding:0;border:1px solid rgba(255,255,255,.2);border-radius:6px;background:none;cursor:pointer}
+.toolbar label{font-size:11px;color:#94a3b8;margin:0}
+.page-wrapper{display:flex;justify-content:center;padding:40px 20px 100px;position:relative;z-index:1}
+.page{background:#fff!important;width:816px;max-width:100%;min-height:1056px;padding:80px;box-shadow:0 25px 50px -12px rgba(0,0,0,.5);border-radius:16px;outline:none;font-size:1.05rem;line-height:1.7;color:#1e293b!important}
+.page h1{font-size:2rem;font-weight:700;margin:24px 0 12px;color:#0f172a;border-bottom:2px solid #f1f5f9;padding-bottom:8px}
+.page h2{font-size:1.5rem;font-weight:600;margin:20px 0 10px;color:#334155}
+.page h3{font-size:1.25rem;font-weight:600;margin:16px 0 8px;color:#475569}
+.page p{margin:12px 0;color:inherit}
+.page table{margin:16px 0;border-collapse:collapse;width:100%}
+.page table td,.page table th{padding:8px 12px;border:1px solid #cbd5e1}
+.page img{display:block;margin:16px auto;max-width:100%;border-radius:4px}
+.page img.sel{outline:3px solid #6366f1}
+.page pre{background:#0f172a;color:#e2e8f0;padding:14px;border-radius:8px;font-family:Consolas,'Courier New',monospace;font-size:.9rem;white-space:pre-wrap}
+.page hr.pagebreak{border:0;border-top:2px dashed #94a3b8;margin:32px 0}
+.comment-mark{background:rgba(251,146,60,.28);border-bottom:2px solid #f97316;cursor:pointer}
+.comment-mark.active{background:rgba(251,146,60,.6)}
+.btn-custom-primary{background:var(--primary-gradient);color:#fff;border:0;padding:7px 18px;border-radius:50px;font-weight:600;box-shadow:0 4px 12px rgba(99,102,241,.3)}
+.btn-custom-primary:hover{opacity:.9;color:#fff}
+.btn-custom-secondary{background:rgba(255,255,255,.1);color:#f8fafc;border:1px solid rgba(255,255,255,.2);padding:7px 18px;border-radius:50px}
+.btn-custom-secondary:hover{background:rgba(255,255,255,.15);color:#fff}
+.save-status{font-size:13px;color:#94a3b8;margin-right:16px}
+/* comments drawer */
+#cPanel{position:fixed;top:0;right:-340px;width:330px;height:100%;background:#1e293b;z-index:200;transition:right .25s;padding:16px;overflow-y:auto;border-left:1px solid rgba(255,255,255,.1)}
+#cPanel.open{right:0}
+.cItem{background:rgba(255,255,255,.06);border-radius:10px;padding:10px;margin-bottom:10px;font-size:13px}
+.cItem.resolved{opacity:.5}
+.cItem q{display:block;color:#fb923c;margin-bottom:4px;font-size:12px}
+.cItem button{font-size:11px;background:none;border:0;color:#a5b4fc;padding:0 6px 0 0}
+#dOverlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(2,6,23,.85);padding:2vh 2vw}
+#dOverlay.open{display:block}
+#dOverlay iframe{width:100%;height:100%;border:0;border-radius:12px;background:#fff}
+.page img[data-diagram]{cursor:pointer}
+#statusBar{position:fixed;bottom:0;left:0;right:0;background:rgba(15,23,42,.9);font-size:12px;color:#94a3b8;padding:4px 16px;z-index:90;display:flex;justify-content:space-between}
+</style>
 </head>
 <body>
-    {% include 'header.html' %}
-    <!-- Ambient Glow Background Elements -->
-    <div class="ambient-glow"></div>
-    <div class="ambient-glow-2"></div>
+{% include 'header.html' %}
+<div class="ambient-glow"></div><div class="ambient-glow-2"></div>
 
-    <!-- Top Navigation Bar -->
-    <div class="topbar">
-        <h1><i class="bi bi-file-earmark-word text-indigo me-2"></i> {{ filename }}</h1>
-        <div class="actions" style="display:flex; align-items:center;">
-            <span class="save-status" id="saveStatus"></span>
-            <a href="{{ url_for('repository.show_docx_in_repo', subpath=subpath) }}" class="btn btn-custom-secondary btn-sm me-2">Cancel</a>
-            <button class="btn btn-custom-primary btn-sm" onclick="saveDoc()">Save Changes</button>
-        </div>
+<div class="topbar">
+  <h1><i class="bi bi-file-earmark-word me-2"></i>{{ filename }}</h1>
+  <div style="display:flex;align-items:center">
+    <span class="save-status" id="saveStatus"></span>
+    <button class="btn btn-custom-secondary btn-sm me-2" onclick="togglePanel()"><i class="bi bi-chat-square-text"></i> Comments <span id="cCount">0</span></button>
+    <a href="{{ url_for('repository.show_docx_in_repo', subpath=subpath) }}" class="btn btn-custom-secondary btn-sm me-2">Cancel</a>
+    <button class="btn btn-custom-primary btn-sm" onclick="saveDoc()">Save Changes</button>
+  </div>
+</div>
+
+<div class="toolbar" id="toolbar">
+  <div class="tgroup">
+    <button onclick="exec('undo')" title="Undo"><i class="bi bi-arrow-counterclockwise"></i></button>
+    <button onclick="exec('redo')" title="Redo"><i class="bi bi-arrow-clockwise"></i></button>
+  </div>
+  <div class="tgroup">
+    <select onchange="formatBlock(this.value)" title="Style">
+      <option value="p">Normal</option><option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option>
+    </select>
+    <select onchange="setFont(this.value)" title="Font">
+      <option value="">Font</option>
+      <option>Arial</option><option>Calibri</option><option>Cambria</option><option>Georgia</option><option>Times New Roman</option>
+      <option>Verdana</option><option>Courier New</option><option>Consolas</option><option>Segoe UI</option>
+    </select>
+    <select onchange="setSize(this.value)" title="Size (pt)">
+      <option value="">Size</option>
+      <option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>14</option><option>16</option><option>18</option><option>24</option><option>32</option>
+    </select>
+  </div>
+  <div class="tgroup">
+    <button onclick="exec('bold')" title="Bold"><i class="bi bi-type-bold"></i></button>
+    <button onclick="exec('italic')" title="Italic"><i class="bi bi-type-italic"></i></button>
+    <button onclick="exec('underline')" title="Underline"><i class="bi bi-type-underline"></i></button>
+    <button onclick="exec('strikeThrough')" title="Strikethrough"><i class="bi bi-type-strikethrough"></i></button>
+    <button onclick="exec('subscript')" title="Subscript (H₂O)"><i class="bi bi-subscript"></i></button>
+    <button onclick="exec('superscript')" title="Superscript (m²)"><i class="bi bi-superscript"></i></button>
+  </div>
+  <div class="tgroup">
+    <label>Text</label><input type="color" value="#000000" onchange="setColor('foreColor',this.value)">
+    <label>Highlight</label><input type="color" value="#fde047" onchange="setColor('hiliteColor',this.value)">
+    <button onclick="setColor('hiliteColor','#fde047')" title="Yellow highlight"><i class="bi bi-highlighter"></i></button>
+    <button onclick="setColor('hiliteColor','transparent')" title="Remove highlight"><i class="bi bi-eraser"></i></button>
+  </div>
+  <div class="tgroup">
+    <button onclick="exec('justifyLeft')"><i class="bi bi-text-left"></i></button>
+    <button onclick="exec('justifyCenter')"><i class="bi bi-text-center"></i></button>
+    <button onclick="exec('justifyRight')"><i class="bi bi-text-right"></i></button>
+    <button onclick="exec('justifyFull')"><i class="bi bi-justify"></i></button>
+    <button onclick="exec('insertUnorderedList')"><i class="bi bi-list-ul"></i></button>
+    <button onclick="exec('insertOrderedList')"><i class="bi bi-list-ol"></i></button>
+    <button onclick="exec('outdent')"><i class="bi bi-text-indent-right"></i></button>
+    <button onclick="exec('indent')"><i class="bi bi-text-indent-left"></i></button>
+  </div>
+  <div class="tgroup">
+    <select onchange="insertCallout(this.value);this.value=''" title="Callout box">
+      <option value="">Callout…</option>
+      <option value="info">ℹ Info</option><option value="note">📝 Note</option><option value="success">✔ Success</option>
+      <option value="warning">⚠ Warning</option><option value="danger">⛔ Danger</option>
+    </select>
+    <button onclick="addComment()" title="Comment on selected text"><i class="bi bi-chat-left-text"></i> Comment</button>
+  </div>
+  <div class="tgroup">
+    <button onclick="document.getElementById('imgInput').click()"><i class="bi bi-image"></i> Image</button>
+    <button onclick="openChart()"><i class="bi bi-graph-up"></i> Graph</button>
+    <button onclick="openDiagram()" title="Flowchart, DFD, ER, UML, BPMN…"><i class="bi bi-diagram-3"></i> Diagram</button>
+    <button onclick="insertTable()"><i class="bi bi-table"></i> Table</button>
+    <button onclick="tableOp('row')" title="Add row below cursor">+Row</button>
+    <button onclick="tableOp('col')" title="Add column">+Col</button>
+    <button onclick="tableOp('del')" title="Delete table"><i class="bi bi-trash"></i></button>
+  </div>
+  <div class="tgroup">
+    <button onclick="insertCode()" title="Code block (click again to undo)"><i class="bi bi-code-slash"></i> Code</button>
+    <button onclick="insertInlineCode()" title="Inline code for selected text"><i class="bi bi-braces"></i></button>
+    <button onclick="insertSymbol(this)" title="Insert symbol">Ω</button>
+    <select onchange="insertText(this.value);this.value=''" title="Symbols">
+      <option value="">Symbols</option>
+      <option>°</option><option>±</option><option>µ</option><option>Ω</option><option>Δ</option><option>π</option><option>α</option><option>β</option><option>λ</option>
+      <option>θ</option><option>σ</option><option>≈</option><option>≠</option><option>≤</option><option>≥</option><option>×</option><option>÷</option><option>→</option><option>√</option><option>∞</option>
+    </select>
+    <button onclick="insertHR()" title="Page break"><i class="bi bi-file-break"></i></button>
+    <button onclick="insertLink()"><i class="bi bi-link-45deg"></i></button>
+  </div>
+  <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="insertImage(event)">
+</div>
+
+<div class="page-wrapper">
+  <div class="page" id="editor" contenteditable="true" spellcheck="true">{{ doc_html | safe }}</div>
+</div>
+
+<!-- Comments drawer -->
+<div id="cPanel">
+  <div class="d-flex justify-content-between mb-3"><h6 class="m-0">Comments</h6><button class="btn-close btn-close-white" onclick="togglePanel()"></button></div>
+  <div id="cCompose" style="display:none" class="mb-3">
+    <small class="text-secondary d-block mb-1">Commenting on:</small>
+    <q id="cQuote" class="d-block mb-2" style="color:#fb923c;font-size:12px"></q>
+    <textarea id="cText" rows="3" class="form-control form-control-sm mb-2" placeholder="Write a comment… (Ctrl+Enter to add)"></textarea>
+    <button class="btn btn-sm btn-primary" onclick="submitComment()">Add comment</button>
+    <button class="btn btn-sm btn-secondary" onclick="cancelComment()">Cancel</button>
+  </div>
+  <div id="cList"><small class="text-secondary">Select text, then click “Comment”.</small></div>
+</div>
+
+<!-- Diagram editor (draw.io embed) -->
+<div id="dOverlay"><iframe id="dFrame" title="Diagram editor"></iframe></div>
+
+<!-- Graph modal -->
+<div class="modal fade" id="chartModal" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content bg-dark text-light">
+    <div class="modal-header"><h5 class="modal-title">Insert graph</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="row g-2 mb-2">
+        <div class="col-md-3"><label class="form-label small">Type</label>
+          <select id="chType" class="form-select form-select-sm"><option value="line">Line</option><option value="scatter">Scatter (x,y)</option><option value="bar">Bar</option></select></div>
+        <div class="col-md-3"><label class="form-label small">Title</label><input id="chTitle" class="form-control form-control-sm"></div>
+        <div class="col-md-3"><label class="form-label small">X label</label><input id="chX" class="form-control form-control-sm" placeholder="Time (s)"></div>
+        <div class="col-md-3"><label class="form-label small">Y label</label><input id="chY" class="form-control form-control-sm" placeholder="Voltage (V)"></div>
+      </div>
+      <label class="form-label small">Data (CSV: header row, first column = X, other columns = series)</label>
+      <textarea id="chData" rows="6" class="form-control form-control-sm font-monospace">x,Series A,Series B
+0,1,2
+1,3,2.5
+2,4,5
+3,6,5.5
+4,9,8</textarea>
+      <div class="text-center mt-3"><canvas id="chCanvas" width="640" height="360" style="background:#fff;border-radius:8px;max-width:100%"></canvas></div>
+      <div id="chErr" class="text-danger small mt-1"></div>
     </div>
-
-    <!-- Interactive Formatting Toolbar -->
-    <div class="toolbar shadow-sm">
-        <select onchange="formatBlock(this.value)">
-            <option value="p">Normal text</option>
-            <option value="h1">Heading 1</option>
-            <option value="h2">Heading 2</option>
-            <option value="h3">Heading 3</option>
-        </select>
-        <button onclick="exec('bold')" title="Bold"><i class="bi bi-type-bold"></i></button>
-        <button onclick="exec('italic')" title="Italic"><i class="bi bi-type-italic"></i></button>
-        <button onclick="exec('underline')" title="Underline"><i class="bi bi-type-underline"></i></button>
-        <button onclick="exec('insertUnorderedList')" title="Bullet List"><i class="bi bi-list-ul"></i></button>
-        <button onclick="exec('insertOrderedList')" title="Numbered List"><i class="bi bi-list-ol"></i></button>
-        <button onclick="document.getElementById('imgInput').click()" title="Insert Image"><i class="bi bi-image"></i> Image</button>
-        <button onclick="insertTable()" title="Insert Table"><i class="bi bi-table"></i> Table</button>
-        <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="insertImage(event)">
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="renderChart()">Preview</button>
+      <button class="btn btn-primary btn-sm" onclick="insertChart()">Insert into document</button>
     </div>
+  </div></div>
+</div>
 
-    <!-- Document Canvas Sheet Wrapper -->
-    <div class="page-wrapper">
-        <div class="page" id="editor" contenteditable="true">{{ doc_html | safe }}</div>
-    </div>
+<form id="saveForm" method="POST" action="{{ url_for('document.edit_docx_save', subpath=subpath) }}" style="display:none;">
+  <input type="hidden" name="version" value="{{ version }}">
+  <textarea name="doc_html" id="doc_html_field"></textarea>
+  <textarea name="comments" id="comments_field"></textarea>
+</form>
+<div id="statusBar"><span id="wc">0 words</span><span>Ctrl+S save · Ctrl+B/I/U formatting · click an image to resize (drag corner via +/- keys)</span></div>
 
-    <!-- Hidden Save Form -->
-    <form id="saveForm" method="POST" action="{{ url_for('document.edit_docx_save', subpath=subpath) }}" style="display:none;">
-        <input type="hidden" name="version" value="{{ version }}">
-        <textarea name="doc_html" id="doc_html_field"></textarea>
-    </form>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+const heartbeatUrl = {{ url_for('document.edit_docx_heartbeat', subpath=subpath) | tojson }};
+const cancelUrl = {{ url_for('document.edit_docx_cancel', subpath=subpath) | tojson }};
+const MAX_SAVE_MB = {{ (max_save_mb | default(25)) | tojson }};   // keep in sync with the server limit
+const AUTHOR = {{ (author | default('Engineer')) | tojson }};
+let comments = {{ (comments | default([])) | tojson }} || [];
+(function () {                                  // comments embedded in the document HTML take priority
+  const emb = document.getElementById('embedded-comments');
+  if (!emb) return;
+  try { const c = JSON.parse(emb.textContent); if (Array.isArray(c) && c.length) comments = c; } catch (e) {}
+  emb.remove();
+})();
+const ed = document.getElementById('editor');
+ed.querySelectorAll('.comment-mark').forEach(s => {   // drop highlights whose comment no longer exists
+  if (!comments.some(c => c.id === s.dataset.cid)) s.replaceWith(...s.childNodes);
+});
+let savedRange = null, dirty = false, chart = null;
 
-    <!-- Client Script Logic -->
-    <script>
-        const heartbeatUrl = {{ url_for('document.edit_docx_heartbeat', subpath=subpath) | tojson }};
-        const cancelUrl = {{ url_for('document.edit_docx_cancel', subpath=subpath) | tojson }};
+/* ---------- selection handling (toolbar controls steal focus) ---------- */
+document.addEventListener('selectionchange', () => {
+  const s = getSelection();
+  if (s.rangeCount && ed.contains(s.anchorNode)) savedRange = s.getRangeAt(0).cloneRange();
+});
+function restore() {
+  ed.focus();
+  if (savedRange) { const s = getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
+}
+document.getElementById('toolbar').addEventListener('mousedown', e => {
+  if (!['SELECT', 'INPUT', 'OPTION'].includes(e.target.tagName)) e.preventDefault();
+});
+function exec(c, v = null) { restore(); document.execCommand(c, false, v); markDirty(); }
+function formatBlock(t) { exec('formatBlock', t); }
+function setColor(cmd, v) { document.execCommand('styleWithCSS', false, true); exec(cmd, v); }
+function setFont(f) { if (f) exec('fontName', f); }
+function setSize(pt) {
+  if (!pt) return;
+  exec('fontSize', '7');
+  ed.querySelectorAll('font[size="7"]').forEach(f => {
+    const s = document.createElement('span');
+    s.style.fontSize = pt + 'pt'; s.innerHTML = f.innerHTML; f.replaceWith(s);
+  });
+}
+function insertHTML(h) { restore(); document.execCommand('insertHTML', false, h); markDirty(); }
+function insertText(t) { if (t) exec('insertText', t); }
+function insertHR() { insertHTML('<hr class="pagebreak" style="page-break-after:always"><p><br></p>'); }
+const CODE_STYLE = "background:#0f172a;color:#e2e8f0;padding:12px;border-radius:6px;font-family:Consolas,'Courier New',monospace;font-size:.9rem;white-space:pre-wrap";
+function blockOf(n) {
+  n = n.nodeType === 3 ? n.parentNode : n;
+  while (n && n !== ed && !/^(P|DIV|H[1-6]|PRE|LI)$/.test(n.nodeName)) n = n.parentNode;
+  return n === ed ? null : n;
+}
+/* Block code. Built with DOM calls because execCommand('insertHTML') merges a lone <pre> into the
+   surrounding paragraph in Chrome, which is why it used to come out as plain text. */
+function insertCode() {
+  restore();
+  const sel = getSelection(); if (!sel.rangeCount) return;
+  const r = sel.getRangeAt(0), start = blockOf(r.startContainer), end = blockOf(r.endContainer);
+  let pre = document.createElement('pre');
+  pre.setAttribute('style', CODE_STYLE);
+  if (!start) {                                    // loose text directly inside the editor
+    pre.textContent = r.toString() || 'code here'; r.deleteContents(); r.insertNode(pre);
+  } else if (start.nodeName === 'PRE' && start === end) {   // toggle back to a normal paragraph
+    const p = document.createElement('p'); p.textContent = start.textContent; start.replaceWith(p);
+    markDirty(); return;
+  } else {
+    let blocks = [start];
+    if (end && end !== start && end.parentNode === start.parentNode) {
+      blocks = []; for (let n = start; n; n = n.nextElementSibling) { blocks.push(n); if (n === end) break; }
+    }
+    const text = blocks.map(b => b.innerText.replace(/\u00a0/g, ' ').replace(/\n+$/, '')).join('\n').trim();
+    pre.textContent = text || 'code here';
+    start.before(pre); blocks.forEach(b => b.remove());
+  }
+  if (!pre.nextElementSibling) pre.after(Object.assign(document.createElement('p'), {innerHTML: '<br>'}));
+  const nr = document.createRange(); nr.selectNodeContents(pre); nr.collapse(false);
+  sel.removeAllRanges(); sel.addRange(nr);
+  markDirty();
+}
+function insertInlineCode() {                      // monospace + light background for a few selected words
+  restore();
+  const sel = getSelection(); if (!sel.rangeCount || sel.isCollapsed) return alert('Select the text to format as code.');
+  const r = sel.getRangeAt(0), code = document.createElement('code');
+  code.setAttribute('style', "font-family:Consolas,'Courier New',monospace;background-color:#f1f5f9;padding:1px 4px;border-radius:3px");
+  code.appendChild(r.extractContents()); r.insertNode(code);
+  markDirty();
+}
+function insertLink() { const u = prompt('URL'); if (u) exec('createLink', u); }
+function insertSymbol() {}
 
-        function exec(command) {
-            document.execCommand(command, false, null);
-            document.getElementById('editor').focus();
-        }
+/* ---------- callouts (single-cell tables with inline styles => survive docx conversion) ---------- */
+const CALL = {
+  info:    ['#eff6ff', '#3b82f6', 'ℹ INFO'],
+  note:    ['#f5f3ff', '#8b5cf6', '📝 NOTE'],
+  success: ['#f0fdf4', '#22c55e', '✔ SUCCESS'],
+  warning: ['#fffbeb', '#f59e0b', '⚠ WARNING'],
+  danger:  ['#fef2f2', '#ef4444', '⛔ DANGER']
+};
+function insertCallout(k) {
+  if (!k) return;
+  const [bg, bd, label] = CALL[k];
+  const sel = getSelection().toString() || 'Type your message here…';
+  insertHTML(`<table class="callout callout-${k}" style="width:100%;border-collapse:collapse"><tr><td style="background:${bg};border:1px solid ${bd};border-left:6px solid ${bd};padding:10px 14px"><b style="color:${bd}">${label}:</b> ${sel.replace(/</g, '&lt;')}</td></tr></table><p><br></p>`);
+}
 
-        function formatBlock(tag) {
-            document.execCommand('formatBlock', false, tag);
-            document.getElementById('editor').focus();
-        }
+/* ---------- tables ---------- */
+function insertTable() {
+  const r = parseInt(prompt('Rows?', '3')), c = parseInt(prompt('Columns?', '3'));
+  if (!r || !c) return;
+  let h = '<table border="1" style="border-collapse:collapse;width:100%">';
+  for (let i = 0; i < r; i++) {
+    h += '<tr>';
+    for (let j = 0; j < c; j++) h += i === 0 ? '<th style="background:#f1f5f9">&nbsp;</th>' : '<td>&nbsp;</td>';
+    h += '</tr>';
+  }
+  insertHTML(h + '</table><p><br></p>');
+}
+function tableOp(op) {
+  restore();
+  let n = getSelection().anchorNode; n = n && (n.nodeType === 3 ? n.parentNode : n);
+  const cell = n && n.closest('td,th'), tbl = n && n.closest('table');
+  if (!tbl) return alert('Place the cursor inside a table first.');
+  if (op === 'del') { tbl.remove(); }
+  else if (op === 'row') {
+    const row = cell.parentNode, nr = row.cloneNode(true);
+    nr.querySelectorAll('td,th').forEach(x => x.innerHTML = '&nbsp;'); row.after(nr);
+  } else {
+    const idx = cell.cellIndex;
+    tbl.querySelectorAll('tr').forEach(tr => {
+      const src = tr.cells[idx], nc = src.cloneNode(false); nc.innerHTML = '&nbsp;'; src.after(nc);
+    });
+  }
+  markDirty();
+}
 
-        function insertImage(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.execCommand('insertImage', false, e.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
+/* ---------- images ---------- */
+const MAX_IMG_PX = 1600;
+function fileToDataURL(file) {          // downscales big photos so the saved HTML stays small
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const k = Math.min(1, MAX_IMG_PX / Math.max(img.width, img.height));
+      const native = ['image/png', 'image/jpeg', 'image/gif'].includes(file.type);
+      if (k === 1 && native && file.size < 400000) {
+        const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(file); return;
+      }
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const g = c.getContext('2d'), png = file.type === 'image/png';
+      if (!png) { g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); }
+      g.drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.85));
+    };
+    img.onerror = () => rej(new Error('Unsupported image'));
+    img.src = url;
+  });
+}
+function insertImage(e) {
+  const f = e.target.files[0]; if (!f) return;
+  fileToDataURL(f).then(u => insertHTML(`<img src="${u}" alt="${f.name.replace(/"/g, '')}" style="max-width:100%"><p><br></p>`)).catch(err => alert(err.message));
+  e.target.value = '';
+}
+ed.addEventListener('paste', e => {
+  const items = [...((e.clipboardData && e.clipboardData.items) || [])].filter(i => i.type.startsWith('image/'));
+  if (!items.length) return;
+  e.preventDefault();
+  items.forEach(i => fileToDataURL(i.getAsFile()).then(u => insertHTML(`<img src="${u}" style="max-width:100%"><p><br></p>`)));
+});
+let selImg = null;
+ed.addEventListener('click', e => {
+  document.querySelectorAll('.comment-mark.active').forEach(x => x.classList.remove('active'));
+  if (selImg) selImg.classList.remove('sel');
+  selImg = e.target.tagName === 'IMG' ? e.target : null;
+  if (selImg) selImg.classList.add('sel');
+  const m = e.target.closest('.comment-mark');
+  if (m) { m.classList.add('active'); togglePanel(true); const it = document.getElementById('ci-' + m.dataset.cid); it && it.scrollIntoView({behavior: 'smooth'}); }
+});
+ed.addEventListener('keydown', e => {   // + / - resize selected image
+  if (!selImg || !['+', '-', '='].includes(e.key) || !e.altKey) return;
+  e.preventDefault();
+  const w = selImg.getBoundingClientRect().width;
+  selImg.style.width = Math.max(60, w + (e.key === '-' ? -40 : 40)) + 'px';
+});
 
-        function insertTable() {
-            const rows = prompt("Number of rows?", "2");
-            const cols = prompt("Number of columns?", "2");
-            if (!rows || !cols) return;
-            let html = '<table border="1" style="border-collapse:collapse;width:100%;">';
-            for (let r = 0; r < parseInt(rows); r++) {
-                html += '<tr>';
-                for (let c = 0; c < parseInt(cols); c++) {
-                    html += '<td>&nbsp;</td>';
-                }
-                html += '</tr>';
-            }
-            html += '</table><p><br></p>';
-            document.execCommand('insertHTML', false, html);
-        }
+/* ---------- graphs (rendered to PNG so they embed in the docx) ---------- */
+const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#0891b2'];
+function openChart() { new bootstrap.Modal('#chartModal').show(); setTimeout(renderChart, 250); }
+function renderChart() {
+  const err = document.getElementById('chErr'); err.textContent = '';
+  try {
+    const rows = document.getElementById('chData').value.trim().split('\n').map(l => l.split(',').map(s => s.trim()));
+    const head = rows.shift(), type = document.getElementById('chType').value;
+    if (head.length < 2 || !rows.length) throw new Error('Need a header row plus at least one data row and 2 columns.');
+    const datasets = head.slice(1).map((name, i) => ({
+      label: name, borderColor: COLORS[i % 6], backgroundColor: COLORS[i % 6] + (type === 'bar' ? 'cc' : '55'),
+      tension: .25, pointRadius: 3,
+      data: rows.map(r => type === 'scatter' ? {x: parseFloat(r[0]), y: parseFloat(r[i + 1])} : parseFloat(r[i + 1]))
+    }));
+    if (chart) chart.destroy();
+    const ax = t => ({title: {display: !!t, text: t, font: {size: 13}}});
+    chart = new Chart(document.getElementById('chCanvas'), {
+      type, data: {labels: rows.map(r => r[0]), datasets},
+      options: {
+        responsive: false, animation: false,
+        plugins: {title: {display: !!document.getElementById('chTitle').value, text: document.getElementById('chTitle').value, font: {size: 16}}, legend: {display: datasets.length > 1}},
+        scales: {x: ax(document.getElementById('chX').value), y: ax(document.getElementById('chY').value)}
+      },
+      plugins: [{id: 'bg', beforeDraw: c => { c.ctx.save(); c.ctx.globalCompositeOperation = 'destination-over'; c.ctx.fillStyle = '#fff'; c.ctx.fillRect(0, 0, c.width, c.height); c.ctx.restore(); }}]
+    });
+  } catch (e) { err.textContent = e.message; }
+}
+function insertChart() {
+  renderChart(); if (!chart) return;
+  const url = document.getElementById('chCanvas').toDataURL('image/png');
+  const cap = document.getElementById('chTitle').value || 'Graph';
+  bootstrap.Modal.getInstance('#chartModal').hide();
+  setTimeout(() => insertHTML(`<img src="${url}" alt="${cap}" style="width:600px;max-width:100%"><p style="text-align:center"><i>Figure: ${cap.replace(/</g, '&lt;')}</i></p>`), 300);
+}
 
-        function saveDoc() {
-            const editor = document.getElementById('editor');
-            document.getElementById('doc_html_field').value = editor.innerHTML;
-            document.getElementById('saveForm').submit();
-        }
+/* ---------- diagrams (draw.io embed; PNG carries the XML so it can be re-edited) ---------- */
+const DRAWIO = {{ (drawio_url | default('https://embed.diagrams.net')) | tojson }};
+const dFrame = document.getElementById('dFrame'), dOverlay = document.getElementById('dOverlay');
+let dTarget = null, dPending = false;
+function openDiagram(img) {
+  dTarget = img && img.tagName === 'IMG' ? img : null; dPending = false;
+  dFrame.src = DRAWIO + '/?embed=1&proto=json&spin=1&saveAndExit=1&noSaveBtn=1&libs=general;flowchart;er;uml;bpmn;basic;arrows2';
+  dOverlay.classList.add('open');
+}
+function closeDiagram() { dOverlay.classList.remove('open'); dFrame.src = 'about:blank'; dTarget = null; }
+const dPost = o => dFrame.contentWindow.postMessage(JSON.stringify(o), '*');
+window.addEventListener('message', e => {
+  if (e.source !== dFrame.contentWindow) return;
+  let m; try { m = JSON.parse(e.data); } catch (x) { return; }
+  if (m.event === 'init') dPost(dTarget ? {action: 'load', xmlpng: dTarget.src} : {action: 'load', xml: ''});
+  else if (m.event === 'save') { dPending = true; dPost({action: 'export', format: 'xmlpng', scale: 2, spinKey: 'saving'}); }
+  else if (m.event === 'export' && m.data) {
+    if (dTarget) { dTarget.src = m.data; markDirty(); }
+    else insertHTML(`<img src="${m.data}" alt="Diagram" data-diagram="1" title="Double-click to edit diagram" style="max-width:100%"><p><br></p>`);
+    closeDiagram();
+  }
+  else if (m.event === 'exit' && !dPending) closeDiagram();
+});
+ed.addEventListener('dblclick', e => { if (e.target.tagName === 'IMG' && e.target.dataset.diagram) openDiagram(e.target); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && dOverlay.classList.contains('open')) closeDiagram(); });
 
-        // Keep the soft lock alive every 60s while this tab is open
-        setInterval(() => {
-            fetch(heartbeatUrl, { method: "POST" }).catch(() => {});
-        }, 60000);
+/* ---------- comments ---------- */
+let pendingRange = null;
+function addComment() {
+  const r = savedRange;                      // captured by selectionchange; survives toolbar click + panel focus
+  if (!r || r.collapsed || !ed.contains(r.commonAncestorContainer)) return alert('Select the text you want to comment on first.');
+  pendingRange = r.cloneRange();
+  document.getElementById('cQuote').textContent = pendingRange.toString().trim().slice(0, 80);
+  document.getElementById('cCompose').style.display = 'block';
+  togglePanel(true);
+  setTimeout(() => document.getElementById('cText').focus(), 50);
+}
+function cancelComment() {
+  pendingRange = null;
+  document.getElementById('cText').value = '';
+  document.getElementById('cCompose').style.display = 'none';
+}
+function submitComment() {
+  const text = document.getElementById('cText').value.trim();
+  if (!text || !pendingRange) return;
+  const id = 'c' + Date.now();
+  const quote = wrapRange(pendingRange, id);
+  if (!quote) { alert('Could not attach the comment to that selection.'); return cancelComment(); }
+  comments.push({id, text, author: AUTHOR, time: new Date().toISOString(), resolved: false, quote: quote.trim().slice(0, 80)});
+  cancelComment(); renderComments(); markDirty();
+}
+document.getElementById('cText').addEventListener('keydown', e => { if (e.ctrlKey && e.key === 'Enter') submitComment(); });
+/* wraps every text node in the range (works across bold/italic/paragraph boundaries) */
+function wrapRange(range, cid) {
+  const c = range.commonAncestorContainer;
+  const walker = document.createTreeWalker(c.nodeType === 3 ? c.parentNode : c, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) if (range.intersectsNode(walker.currentNode)) nodes.push(walker.currentNode);
+  let quote = '';
+  nodes.forEach(n => {
+    const start = n === range.startContainer ? range.startOffset : 0;
+    const end = n === range.endContainer ? range.endOffset : n.length;
+    if (end <= start) return;
+    let t = n;
+    if (start > 0) t = n.splitText(start);
+    if (end - start < t.length) t.splitText(end - start);
+    const p = t.parentNode;
+    if (!t.data.trim() && (p === ed || /^(TABLE|TBODY|THEAD|TR|UL|OL)$/.test(p.nodeName))) return;
+    const span = document.createElement('span');
+    span.className = 'comment-mark'; span.dataset.cid = cid;
+    p.insertBefore(span, t); span.appendChild(t);
+    quote += t.data;
+  });
+  return quote;
+}
+function renderComments() {
+  const box = document.getElementById('cList');
+  document.getElementById('cCount').textContent = comments.length;
+  if (!comments.length) { box.innerHTML = '<small class="text-secondary">Select text, then click “Comment”.</small>'; return; }
+  box.innerHTML = '';
+  comments.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'cItem' + (c.resolved ? ' resolved' : ''); d.id = 'ci-' + c.id;
+    const q = document.createElement('q'); q.textContent = c.quote;
+    const b = document.createElement('div'); b.textContent = c.text;
+    const m = document.createElement('small'); m.className = 'text-secondary d-block my-1';
+    m.textContent = c.author + ' · ' + new Date(c.time).toLocaleString();
+    d.append(q, b, m);
+    [['Go to', () => { const k = ed.querySelector(`[data-cid="${c.id}"]`); k && k.scrollIntoView({behavior: 'smooth', block: 'center'}); }],
+     [c.resolved ? 'Reopen' : 'Resolve', () => { c.resolved = !c.resolved; renderComments(); markDirty(); }],
+     ['Edit', () => { const t = prompt('Edit comment', c.text); if (t) { c.text = t; renderComments(); markDirty(); } }],
+     ['Delete', () => {
+        ed.querySelectorAll(`[data-cid="${c.id}"]`).forEach(k => k.replaceWith(...k.childNodes));
+        comments = comments.filter(x => x.id !== c.id); renderComments(); markDirty(); }]
+    ].forEach(([t, fn]) => { const bt = document.createElement('button'); bt.textContent = t; bt.onclick = fn; d.appendChild(bt); });
+    box.appendChild(d);
+  });
+}
+function togglePanel(open) {
+  const p = document.getElementById('cPanel');
+  if (open === true || open === false) p.classList.toggle('open', open); else p.classList.toggle('open');
+}
 
-        // Best-effort release on tab close
-        window.addEventListener("beforeunload", () => {
-            navigator.sendBeacon(cancelUrl);
-        });
-    </script>
-
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+/* ---------- save / status ---------- */
+function markDirty() { dirty = true; document.getElementById('saveStatus').textContent = 'Unsaved changes'; wc(); }
+function wc() { const t = ed.innerText.trim(); document.getElementById('wc').textContent = (t ? t.split(/\s+/).length : 0) + ' words'; }
+ed.addEventListener('input', markDirty);
+function saveDoc() {
+  ed.querySelectorAll('img.sel').forEach(i => i.classList.remove('sel'));
+  ed.querySelectorAll('.comment-mark.active').forEach(i => i.classList.remove('active'));
+  const html = ed.innerHTML, limit = MAX_SAVE_MB * 1048576;
+  if (html.length > limit) {
+    return alert(`The document is ${(html.length / 1048576).toFixed(1)} MB, above the ${MAX_SAVE_MB} MB save limit. Remove or shrink some images and try again.`);
+  }
+  const embedded = '<script type="application/json" id="embedded-comments">' + JSON.stringify(comments).replace(/</g, '\\u003c') + '<\/script>';
+  document.getElementById('doc_html_field').value = html + embedded;
+  document.getElementById('comments_field').value = JSON.stringify(comments);
+  dirty = false;
+  document.getElementById('saveForm').submit();
+}
+document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveDoc(); } });
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+setInterval(() => fetch(heartbeatUrl, {method: 'POST'}).catch(() => {}), 60000);
+window.addEventListener('pagehide', () => navigator.sendBeacon(cancelUrl));
+renderComments(); wc(); dirty = false; document.getElementById('saveStatus').textContent = '';
+</script>
 </body>
 </html>

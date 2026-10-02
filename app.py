@@ -15,6 +15,8 @@ from routes.search_routes import search_bp
 def create_app():
 
     app = Flask(__name__)
+    app.config["MAX_CONTENT_LENGTH"] = 64 * 1024 * 1024
+    app.config["MAX_FORM_MEMORY_SIZE"] = 64 * 1024 * 1024   # Flask/Werkzeug >= 3.1
 
     app.secret_key = "your_super_secret_and_random_string"
 
@@ -37,7 +39,6 @@ def create_app():
 
 
 app = create_app()
-
 
 if __name__ == "__main__":
     socketio.run(
