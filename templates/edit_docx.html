@@ -53,6 +53,13 @@ body{margin:0;min-height:100vh;background:linear-gradient(135deg,#0f172a 0%,#1e1
 #dOverlay.open{display:block}
 #dOverlay iframe{width:100%;height:100%;border:0;border-radius:12px;background:#fff}
 .page img[data-diagram]{cursor:pointer}
+.page img{cursor:pointer}
+#imgBar{display:none;position:fixed;z-index:150;gap:4px;align-items:center;background:#1e293b;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:5px 6px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+#imgBar button{border:0;background:rgba(255,255,255,.08);color:#f8fafc;font-size:12px;padding:4px 9px;border-radius:6px;cursor:pointer}
+#imgBar button:hover{background:rgba(99,102,241,.4)}
+#imgBar button.del{background:rgba(239,68,68,.25);color:#fecaca}
+#imgBar button.del:hover{background:rgba(239,68,68,.6);color:#fff}
+#imgBar .sep{width:1px;height:18px;background:rgba(255,255,255,.2);margin:0 2px}
 #statusBar{position:fixed;bottom:0;left:0;right:0;background:rgba(15,23,42,.9);font-size:12px;color:#94a3b8;padding:4px 16px;z-index:90;display:flex;justify-content:space-between}
 </style>
 </head>
@@ -160,6 +167,15 @@ body{margin:0;min-height:100vh;background:linear-gradient(135deg,#0f172a 0%,#1e1
     <button class="btn btn-sm btn-secondary" onclick="cancelComment()">Cancel</button>
   </div>
   <div id="cList"><small class="text-secondary">Select text, then click “Comment”.</small></div>
+</div>
+
+<!-- Floating toolbar for the selected image / graph / diagram -->
+<div id="imgBar" onmousedown="event.preventDefault()">
+  <button onclick="imgSize(25)">25%</button><button onclick="imgSize(50)">50%</button>
+  <button onclick="imgSize(75)">75%</button><button onclick="imgSize(100)">100%</button>
+  <span class="sep"></span>
+  <button id="imgEditBtn" onclick="openDiagram(selImg)" style="display:none"><i class="bi bi-pencil"></i> Edit diagram</button>
+  <button class="del" onclick="deleteSelImg()" title="Delete (or press Delete / Backspace)"><i class="bi bi-trash"></i> Delete</button>
 </div>
 
 <!-- Diagram editor (draw.io embed) -->
@@ -372,11 +388,54 @@ ed.addEventListener('paste', e => {
   items.forEach(i => fileToDataURL(i.getAsFile()).then(u => insertHTML(`<img src="${u}" style="max-width:100%"><p><br></p>`)));
 });
 let selImg = null;
+const imgBar = document.getElementById('imgBar');
+function selectImg(img) {
+  if (selImg) selImg.classList.remove('sel');
+  selImg = img;
+  if (img) {
+    img.classList.add('sel');
+    document.getElementById('imgEditBtn').style.display = img.dataset.diagram ? '' : 'none';
+    placeImgBar();
+  } else imgBar.style.display = 'none';
+}
+function placeImgBar() {
+  if (!selImg || !selImg.isConnected) return selectImg(null);
+  const r = selImg.getBoundingClientRect(), stickyBottom = document.getElementById('toolbar').getBoundingClientRect().bottom;
+  if (r.bottom < stickyBottom || r.top > innerHeight) { imgBar.style.display = 'none'; return; }
+  imgBar.style.display = 'flex';
+  const w = imgBar.offsetWidth, h = imgBar.offsetHeight;
+  imgBar.style.top = Math.max(r.top - h - 8, stickyBottom + 6) + 'px';
+  imgBar.style.left = Math.min(Math.max(r.left + r.width / 2 - w / 2, 8), innerWidth - w - 8) + 'px';
+}
+window.addEventListener('scroll', placeImgBar, {passive: true});
+window.addEventListener('resize', placeImgBar);
+function imgSize(pct) {
+  if (!selImg) return;
+  const cs = getComputedStyle(ed), full = ed.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  selImg.style.width = Math.round(full * pct / 100) + 'px';
+  placeImgBar(); markDirty();
+}
+function deleteSelImg() {
+  const img = selImg; if (!img) return;
+  const parent = img.parentElement, cap = parent && parent.nextElementSibling;
+  selectImg(null);
+  img.remove();
+  // a graph's "Figure: ..." caption goes with it
+  if (cap && cap.tagName === 'P' && /^\s*Figure:/i.test(cap.textContent) && (!img.alt || cap.textContent.includes(img.alt))) cap.remove();
+  if (parent && parent !== ed && parent.tagName === 'P' && !parent.textContent.trim() && !parent.querySelector('img')) parent.remove();
+  if (!ed.firstElementChild) ed.innerHTML = '<p><br></p>';
+  ed.focus(); markDirty();
+}
+ed.addEventListener('keydown', e => {          // Delete / Backspace removes the selected image; typing deselects it
+  if (!selImg) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelImg(); }
+  else if (e.key === 'Escape') selectImg(null);
+  else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) selectImg(null);
+});
+document.addEventListener('mousedown', e => { if (selImg && !ed.contains(e.target) && !imgBar.contains(e.target)) selectImg(null); });
 ed.addEventListener('click', e => {
   document.querySelectorAll('.comment-mark.active').forEach(x => x.classList.remove('active'));
-  if (selImg) selImg.classList.remove('sel');
-  selImg = e.target.tagName === 'IMG' ? e.target : null;
-  if (selImg) selImg.classList.add('sel');
+  selectImg(e.target.tagName === 'IMG' ? e.target : null);
   const m = e.target.closest('.comment-mark');
   if (m) { m.classList.add('active'); togglePanel(true); const it = document.getElementById('ci-' + m.dataset.cid); it && it.scrollIntoView({behavior: 'smooth'}); }
 });
@@ -419,7 +478,7 @@ function insertChart() {
   const url = document.getElementById('chCanvas').toDataURL('image/png');
   const cap = document.getElementById('chTitle').value || 'Graph';
   bootstrap.Modal.getInstance('#chartModal').hide();
-  setTimeout(() => insertHTML(`<img src="${url}" alt="${cap}" style="width:600px;max-width:100%"><p style="text-align:center"><i>Figure: ${cap.replace(/</g, '&lt;')}</i></p>`), 300);
+  setTimeout(() => insertHTML(`<img src="${url}" alt="${cap.replace(/"/g, '&quot;').replace(/</g, '&lt;')}" style="width:600px;max-width:100%"><p style="text-align:center"><i>Figure: ${cap.replace(/</g, '&lt;')}</i></p>`), 300);
 }
 
 /* ---------- diagrams (draw.io embed; PNG carries the XML so it can be re-edited) ---------- */
