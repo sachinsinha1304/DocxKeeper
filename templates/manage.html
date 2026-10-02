@@ -8,7 +8,7 @@
 <body class="container mt-5">
 
     <h2>User Management Dashboard</h2>
-    <a href="{{ url_for('show_docx') }}" class="btn btn-secondary mb-3">Back to Documents</a>
+    <a href="{{ url_for('repository.show_docx') }}" class="btn btn-secondary mb-3">Back to Documents</a>
 
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}

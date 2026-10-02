@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        {{ filename }} - Version {{ version }}
+    </title>
+
+    <style>
+
+        body {
+            margin: 0;
+            background: #f5f5f5;
+            font-family: Arial, sans-serif;
+        }
+
+        .header {
+            background: white;
+            padding: 15px 25px;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            border-bottom: 1px solid #ddd;
+        }
+
+        .filename {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .version {
+            background: #eee;
+            padding: 6px 12px;
+            border-radius: 5px;
+        }
+
+        .readonly-banner {
+            background: #fff3cd;
+            border-bottom: 1px solid #ffeeba;
+
+            padding: 10px;
+
+            text-align: center;
+        }
+
+        .document {
+            width: 800px;
+            min-height: 1000px;
+
+            margin: 30px auto;
+
+            padding: 50px;
+
+            background: white;
+
+            box-shadow:
+                0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .document p {
+            line-height: 1.6;
+        }
+
+        .document img {
+            max-width: 100%;
+            height: auto;
+
+            display: block;
+
+            margin: 15px auto;
+        }
+
+        .document table {
+            width: 100%;
+
+            border-collapse: collapse;
+
+            margin: 20px 0;
+        }
+
+        .document th,
+        .document td {
+            border: 1px solid #ccc;
+
+            padding: 8px;
+
+            text-align: left;
+        }
+
+        .back-button {
+            display: inline-block;
+
+            margin: 20px 0 0 20px;
+
+            padding: 8px 15px;
+
+            text-decoration: none;
+
+            background: #333;
+            color: white;
+
+            border-radius: 5px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="header">
+
+        <div class="filename">
+            {{ filename }}
+        </div>
+
+        <div class="version">
+            Version {{ version }}
+        </div>
+
+    </div>
+
+
+    <div class="readonly-banner">
+
+        You are viewing an older version.
+        This document is read-only.
+
+    </div>
+
+
+    <a
+        class="back-button"
+        href="{{ url_for(
+            'repository.show_docx_in_repo',
+            subpath=subpath
+        ) }}"
+    >
+        ← Back to document
+    </a>
+
+
+    <div class="document">
+
+        {% for item in content %}
+
+            {% if item.type == "paragraph" %}
+
+                <p>
+                    {{ item.text }}
+                </p>
+
+
+            {% elif item.type == "heading" %}
+
+                {% if item.level == 1 %}
+
+                    <h1>
+                        {{ item.text }}
+                    </h1>
+
+                {% elif item.level == 2 %}
+
+                    <h2>
+                        {{ item.text }}
+                    </h2>
+
+                {% elif item.level == 3 %}
+
+                    <h3>
+                        {{ item.text }}
+                    </h3>
+
+                {% elif item.level == 4 %}
+
+                    <h4>
+                        {{ item.text }}
+                    </h4>
+
+                {% else %}
+
+                    <h5>
+                        {{ item.text }}
+                    </h5>
+
+                {% endif %}
+
+
+            {% elif item.type == "image" %}
+
+                <img
+                    src="{{ item.src }}"
+                    alt="Document image"
+                >
+
+
+            {% elif item.type == "table" %}
+
+                <table>
+
+                    <tbody>
+
+                        {% for row in item.rows %}
+
+                            <tr>
+
+                                {% for cell in row %}
+
+                                    <td>
+                                        {{ cell }}
+                                    </td>
+
+                                {% endfor %}
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+
+            {% elif item.type == "error" %}
+
+                <p style="color: red;">
+                    {{ item.text }}
+                </p>
+
+            {% endif %}
+
+        {% endfor %}
+
+    </div>
+
+</body>
+
+</html>
